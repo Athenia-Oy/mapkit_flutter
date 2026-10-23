@@ -206,7 +206,7 @@ final class MKMapViewControllerImpl implements MKMapViewController {
         completer.complete(await task());
       } on PlatformException catch (e, st) {
         completer.completeError(MapKitException.fromPlatform(e), st);
-      } catch (e, st) {
+      } on Object catch (e, st) {
         completer.completeError(e, st);
       }
     });

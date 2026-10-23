@@ -1,5 +1,4 @@
 import 'package:checks/checks.dart';
-import 'package:flutter/foundation.dart';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mapkit_flutter/mapkit_flutter.dart';
@@ -15,12 +14,13 @@ void main() {
   var host = FakeHostApi();
   var nextViewId = 0;
 
+  MKMapViewControllerImpl? createdController;
+
   setUp(() {
     host = .new();
+    createdController = null;
     nextViewId++;
   });
-
-  MKMapViewControllerImpl? createdController;
 
   MKMapViewControllerImpl requireCreated() {
     final c = createdController;
@@ -658,29 +658,24 @@ void main() {
       testWidgets('$name throws on macOS instead of being ignored', (
         tester,
       ) async {
-        debugDefaultTargetPlatformOverride = .macOS;
         await tester.pumpWidget(build(controllerFactory));
-        debugDefaultTargetPlatformOverride = null;
         check(tester.takeException())
             .isA<MapKitUnsupportedPlatformException>()
             .has((e) => e.feature, 'feature')
             .isNotNull()
             .contains(name);
         check(host.callNames).isEmpty();
-      });
+      }, variant: TargetPlatformVariant.only(.macOS));
 
       testWidgets('$name is accepted on iOS', (tester) async {
-        debugDefaultTargetPlatformOverride = .iOS;
         await tester.pumpWidget(build(controllerFactory));
-        debugDefaultTargetPlatformOverride = null;
         check(tester.takeException()).isNull();
-      });
+      }, variant: TargetPlatformVariant.only(.iOS));
     }
 
     testWidgets('a rebuild that adds an iOS-only setting throws on macOS', (
       tester,
     ) async {
-      debugDefaultTargetPlatformOverride = .macOS;
       await tester.pumpWidget(
         MKMapView(
           initialCamera: sampleCamera,
@@ -695,9 +690,8 @@ void main() {
           debugControllerFactory: controllerFactory,
         ),
       );
-      debugDefaultTargetPlatformOverride = null;
       check(tester.takeException()).isA<MapKitUnsupportedPlatformException>();
-    });
+    }, variant: TargetPlatformVariant.only(.macOS));
   });
 }
 

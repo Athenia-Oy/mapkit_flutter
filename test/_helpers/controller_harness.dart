@@ -61,7 +61,7 @@ Future<T> catchMapKit<T extends MapKitException>(
     await action();
   } on T catch (error) {
     return error;
-  } catch (error) {
+  } on Object catch (error) {
     fail('Expected $T, got ${error.runtimeType}: $error');
   }
   fail('Expected $T');

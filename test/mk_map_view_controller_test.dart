@@ -54,12 +54,12 @@ void main() {
         heading: 90,
         pitch: 15,
       );
-      final camera = (await harness.controller.camera)!;
       final target = CLLocationCoordinate2D(latitude: 10, longitude: 20);
-      check(camera.centerCoordinate).equals(target);
-      check(camera.distance).equals(4321);
-      check(camera.heading).equals(90);
-      check(camera.pitch).equals(15);
+      check(await harness.controller.camera).isNotNull()
+        ..has((c) => c.centerCoordinate, 'centerCoordinate').equals(target)
+        ..has((c) => c.distance, 'distance').equals(4321)
+        ..has((c) => c.heading, 'heading').equals(90)
+        ..has((c) => c.pitch, 'pitch').equals(15);
     });
 
     test('camera is null before the first layout', () async {
@@ -76,11 +76,11 @@ void main() {
         latitudeDelta: 1,
         longitudeDelta: 2,
       );
-      final region = (await harness.controller.region)!;
       final center = CLLocationCoordinate2D(latitude: 10, longitude: 20);
       final span = MKCoordinateSpan(latitudeDelta: 1, longitudeDelta: 2);
-      check(region.center).equals(center);
-      check(region.span).equals(span);
+      check(await harness.controller.region).isNotNull()
+        ..has((r) => r.center, 'center').equals(center)
+        ..has((r) => r.span, 'span').equals(span);
     });
 
     test('region is null before the first layout', () async {

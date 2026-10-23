@@ -8,12 +8,11 @@ void main() {
       final e = MapKitException.fromPlatform(
         .new(code: 'boom', message: 'kaboom', details: 42),
       );
-      check(e).isA<MapKitPlatformException>();
-      final platform = e as MapKitPlatformException;
-      check(platform.code).equals('boom');
-      check(platform.message).equals('kaboom');
-      check(platform.details).equals(42);
-      check(platform.toString()).contains('boom');
+      check(e).isA<MapKitPlatformException>()
+        ..has((p) => p.code, 'code').equals('boom')
+        ..has((p) => p.message, 'message').equals('kaboom')
+        ..has((p) => p.details, 'details').equals(42)
+        ..has((p) => p.toString(), 'toString()').contains('boom');
     });
 
     test('falls back to a generic message when the platform sends none', () {
