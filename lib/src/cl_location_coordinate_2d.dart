@@ -27,7 +27,7 @@ final class CLLocationCoordinate2D {
   /// Constructs a coordinate from its Pigeon wire representation.
   @internal
   factory fromPlatform(PlatformCoordinate p) =>
-      CLLocationCoordinate2D(latitude: p.latitude, longitude: p.longitude);
+      .new(latitude: p.latitude, longitude: p.longitude);
 
   static double _checkLatitude(double latitude) {
     checkInRange(latitude, -90, 90, 'latitude');
@@ -50,7 +50,7 @@ final class CLLocationCoordinate2D {
   /// Converts this coordinate to its Pigeon wire representation.
   @internal
   PlatformCoordinate toPlatform() =>
-      PlatformCoordinate(latitude: latitude, longitude: longitude);
+      .new(latitude: latitude, longitude: longitude);
 
   @override
   bool operator ==(Object other) =>

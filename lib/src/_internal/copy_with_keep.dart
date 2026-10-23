@@ -16,7 +16,7 @@ const String keepString = '\u0000mapkit_flutter.keep';
 
 /// Sentinel for `List<double>?` parameters.
 @internal
-const List<double> keepDoubles = <double>[-1];
+const List<double> keepDoubles = [-1];
 
 /// Sentinel for `VoidCallback?` parameters.
 @internal

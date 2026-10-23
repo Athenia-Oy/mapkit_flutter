@@ -23,7 +23,7 @@ final class const MKMapSnapshotOptions({
 
   /// Converts these snapshot options to their Pigeon wire representation.
   @internal
-  PlatformSnapshotOptions toPlatform() => PlatformSnapshotOptions(
+  PlatformSnapshotOptions toPlatform() => .new(
     showsPointsOfInterest: showsPointsOfInterest,
     showsAnnotations: showsAnnotations,
     showsOverlays: showsOverlays,

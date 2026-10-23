@@ -1,5 +1,3 @@
-import 'dart:ui' show Color;
-
 import 'package:checks/checks.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mapkit_flutter/mapkit_flutter.dart';
@@ -10,21 +8,21 @@ void main() {
   group('MKPolygon wire mapping', () {
     test('serializes interior polygons ring by ring', () {
       final platform = MKPolygon(
-        id: const MKPolygonId('zone'),
+        id: const .new('zone'),
         coordinates: [
-          CLLocationCoordinate2D(latitude: 0, longitude: 0),
-          CLLocationCoordinate2D(latitude: 0, longitude: 10),
-          CLLocationCoordinate2D(latitude: 10, longitude: 10),
+          .new(latitude: 0, longitude: 0),
+          .new(latitude: 0, longitude: 10),
+          .new(latitude: 10, longitude: 10),
         ],
         interiorPolygons: [
           [
-            CLLocationCoordinate2D(latitude: 2, longitude: 2),
-            CLLocationCoordinate2D(latitude: 2, longitude: 4),
-            CLLocationCoordinate2D(latitude: 4, longitude: 4),
+            .new(latitude: 2, longitude: 2),
+            .new(latitude: 2, longitude: 4),
+            .new(latitude: 4, longitude: 4),
           ],
         ],
-        fillColor: const Color(0x6600FF00),
-        strokeColor: const Color(0xFF112233),
+        fillColor: const .new(0x6600FF00),
+        strokeColor: const .new(0xFF112233),
         lineWidth: 3,
       ).toPlatform();
 
@@ -42,7 +40,7 @@ void main() {
       for (final bad in [-1.0, double.nan, double.infinity]) {
         check(
           () => MKPolygon(
-            id: const MKPolygonId('bad'),
+            id: const .new('bad'),
             coordinates: [applePark, infiniteLoop],
             lineWidth: bad,
           ),
@@ -60,9 +58,9 @@ void main() {
             polygon('z').copyWith(
               interiorPolygons: [
                 [
-                  CLLocationCoordinate2D(latitude: 1, longitude: 1),
-                  CLLocationCoordinate2D(latitude: 1, longitude: 2),
-                  CLLocationCoordinate2D(latitude: 2, longitude: 2),
+                  .new(latitude: 1, longitude: 1),
+                  .new(latitude: 1, longitude: 2),
+                  .new(latitude: 2, longitude: 2),
                 ],
               ],
             ),

@@ -20,11 +20,7 @@ Widget customMarkerWidget({required String label, required Color color}) {
           borderRadius: .circular(16),
           border: .all(color: Colors.white, width: 2),
           boxShadow: const [
-            BoxShadow(
-              color: Colors.black38,
-              blurRadius: 4,
-              offset: Offset(0, 2),
-            ),
+            .new(color: Colors.black38, blurRadius: 4, offset: .new(0, 2)),
           ],
         ),
         child: Row(
@@ -34,7 +30,7 @@ Widget customMarkerWidget({required String label, required Color color}) {
             const SizedBox(width: 4),
             Text(
               label,
-              style: const TextStyle(
+              style: const .new(
                 color: Colors.white,
                 fontWeight: .bold,
                 fontSize: 14,

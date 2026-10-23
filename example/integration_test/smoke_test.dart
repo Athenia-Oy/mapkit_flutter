@@ -20,18 +20,15 @@ void main() {
     await tester.pumpWidget(
       MaterialApp(
         home: MKMapView(
-          initialCamera: MKMapCamera(
-            centerCoordinate: applePark,
-            distance: 1500,
-          ),
+          initialCamera: .new(centerCoordinate: applePark, distance: 1500),
           onMapCreated: (c) => controller = c,
         ),
       ),
     );
 
-    final deadline = DateTime.now().add(const Duration(seconds: 15));
+    final deadline = DateTime.now().add(const .new(seconds: 15));
     while (controller == null && DateTime.now().isBefore(deadline)) {
-      await tester.pump(const Duration(milliseconds: 100));
+      await tester.pump(const .new(milliseconds: 100));
     }
     final ctrl = controller;
     if (ctrl == null) {
@@ -41,7 +38,7 @@ void main() {
     // The visible region exists once the view has layout (null before).
     var maybeRegion = await ctrl.region;
     while (maybeRegion == null && DateTime.now().isBefore(deadline)) {
-      await tester.pump(const Duration(milliseconds: 250));
+      await tester.pump(const .new(milliseconds: 250));
       maybeRegion = await ctrl.region;
     }
     final region = maybeRegion;
@@ -52,10 +49,10 @@ void main() {
     // setCamera → camera round-trip through the host API. MapKit may adjust
     // the exact distance, so assertions stay tolerant.
     await ctrl.setCamera(
-      MKMapCamera(centerCoordinate: applePark, distance: 5000),
+      .new(centerCoordinate: applePark, distance: 5000),
       animated: false,
     );
-    await tester.pump(const Duration(seconds: 1));
+    await tester.pump(const .new(seconds: 1));
     final camera = await ctrl.camera;
     if (camera == null) fail('camera lost its layout');
     final center = camera.centerCoordinate;

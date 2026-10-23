@@ -32,7 +32,7 @@ extension FakeHostApiExpectations on FakeHostApi {
 
   PlatformMapViewCreationParams initializeParams() {
     check(calls.single.$1).equals('initialize');
-    return calls.requireSingleArgs<PlatformMapViewCreationParams>();
+    return calls.requireSingleArgs();
   }
 }
 
@@ -49,17 +49,17 @@ extension FakeHostCallExpectations on List<(String, Object?)> {
 
   T requireSingleArgs<T>() {
     final (name, args) = single;
-    return requireRecordedArgs<T>(args, call: name);
+    return requireRecordedArgs(args, call: name);
   }
 
   T requireLastArgs<T>() {
     final (:name, :args) = lastRecorded();
-    return requireRecordedArgs<T>(args, call: name);
+    return requireRecordedArgs(args, call: name);
   }
 
   T requireArgsAt<T>(int index) {
     final (:name, :args) = recordedAt(index);
-    return requireRecordedArgs<T>(args, call: name);
+    return requireRecordedArgs(args, call: name);
   }
 
   T expectLastArgs<T>(String name) {
@@ -79,7 +79,7 @@ extension RecordedSinkEvents on List<(String, Object?)> {
     if (name != event) {
       fail('Expected event "$event", got "$name"');
     }
-    return requireRecordedArgs<T>(payload, call: name);
+    return requireRecordedArgs(payload, call: name);
   }
 
   T requireSinglePayload<T>({required String event}) {
@@ -87,6 +87,6 @@ extension RecordedSinkEvents on List<(String, Object?)> {
     if (name != event) {
       fail('Expected event "$event", got "$name"');
     }
-    return requireRecordedArgs<T>(payload, call: name);
+    return requireRecordedArgs(payload, call: name);
   }
 }

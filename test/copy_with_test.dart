@@ -22,7 +22,7 @@ void main() {
 
   group('MKPointAnnotation.copyWith', () {
     final full = MKPointAnnotation(
-      id: const MKAnnotationId('a'),
+      id: const .new('a'),
       coordinate: applePark,
       title: 'title',
       subtitle: 'subtitle',
@@ -121,7 +121,7 @@ void main() {
 
   group('MKPolyline.copyWith', () {
     final full = MKPolyline(
-      id: const MKPolylineId('p'),
+      id: const .new('p'),
       coordinates: [applePark, infiniteLoop],
       lineDashPattern: const [6, 3],
       consumeTapEvents: true,
@@ -179,7 +179,7 @@ void main() {
 
   group('MKCircle.copyWith', () {
     final full = MKCircle(
-      id: const MKCircleId('c'),
+      id: const .new('c'),
       center: applePark,
       radius: 500,
       consumeTapEvents: true,

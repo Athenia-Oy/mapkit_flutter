@@ -109,10 +109,8 @@ void main() {
     test('convertToCoordinate returns the coordinate under a point', () async {
       final harness = buildHarness();
       harness.host.coordinate = platformCoord(1, 2);
-      final c = await harness.controller.convertToCoordinate(
-        const Offset(5, 5),
-      );
-      check(c).equals(CLLocationCoordinate2D(latitude: 1, longitude: 2));
+      final c = await harness.controller.convertToCoordinate(const .new(5, 5));
+      check(c).equals(.new(latitude: 1, longitude: 2));
       check(harness.host.calls.lastRecorded().name)
           .equals('convertToCoordinate');
     });
@@ -127,22 +125,19 @@ void main() {
   group('outbound — selection', () {
     test('selectAnnotation forwards the id and reports the outcome', () async {
       final harness = buildHarness();
-      check(
-        await harness.controller.selectAnnotation(const MKAnnotationId('a')),
-      ).isTrue();
+      check(await harness.controller.selectAnnotation(const .new('a')))
+          .isTrue();
       check(harness.expectLast<String>('selectAnnotation')).equals('a');
       harness.host.selectResult = false;
-      check(
-        await harness.controller.selectAnnotation(const MKAnnotationId('x')),
-      ).isFalse();
+      check(await harness.controller.selectAnnotation(const .new('x')))
+          .isFalse();
     });
 
     test('deselectAnnotation reports an id that is not on the map', () async {
       final harness = buildHarness();
       harness.host.deselectResult = false;
-      check(
-        await harness.controller.deselectAnnotation(const MKAnnotationId('a')),
-      ).isFalse();
+      check(await harness.controller.deselectAnnotation(const .new('a')))
+          .isFalse();
       harness.expectLastCall('deselectAnnotation');
     });
 
@@ -158,9 +153,7 @@ void main() {
   group('outbound — polish features', () {
     test('takeSnapshot forwards the options', () async {
       final harness = buildHarness();
-      await harness.controller.takeSnapshot(
-        const MKMapSnapshotOptions(showsOverlays: false),
-      );
+      await harness.controller.takeSnapshot(const .new(showsOverlays: false));
       final options = harness.expectLast<PlatformSnapshotOptions>(
         'takeSnapshot',
       );
@@ -175,7 +168,7 @@ void main() {
         final harness = buildHarness();
         harness.host.lookAroundResult = true;
         final ok = await harness.controller.openLookAround(
-          CLLocationCoordinate2D(latitude: 37, longitude: -122),
+          .new(latitude: 37, longitude: -122),
         );
         check(ok).isTrue();
         final sent = harness.expectLast<PlatformCoordinate>('openLookAround');
@@ -186,8 +179,8 @@ void main() {
     test('addTileOverlay forwards a typed overlay', () async {
       final harness = buildHarness();
       await harness.controller.addTileOverlay(
-        MKTileOverlay(
-          id: const MKTileOverlayId('osm'),
+        .new(
+          id: const .new('osm'),
           urlTemplate: 'https://t/{z}/{x}/{y}.png',
           minimumZ: 3,
           maximumZ: 17,
@@ -204,18 +197,12 @@ void main() {
       'removeTileOverlay forwards id only and reports the outcome',
       () async {
         final harness = buildHarness();
-        check(
-          await harness.controller.removeTileOverlay(
-            const MKTileOverlayId('osm'),
-          ),
-        ).isTrue();
+        check(await harness.controller.removeTileOverlay(const .new('osm')))
+            .isTrue();
         check(harness.expectLast<String>('removeTileOverlay')).equals('osm');
         harness.host.removeTileOverlayResult = false;
-        check(
-          await harness.controller.removeTileOverlay(
-            const MKTileOverlayId('gone'),
-          ),
-        ).isFalse();
+        check(await harness.controller.removeTileOverlay(const .new('gone')))
+            .isFalse();
       },
     );
   });
@@ -252,7 +239,7 @@ void main() {
       final harness = buildHarness();
       harness.controller.eventHandler.onAnnotationSelect('a');
       final sunk = harness.expectSink<MKAnnotationId>('annotationSelect');
-      check(sunk).equals(const MKAnnotationId('a'));
+      check(sunk).equals(const .new('a'));
     });
 
     test('onUserTrackingModeChanged delivers the new mode', () {
@@ -322,7 +309,7 @@ void main() {
       check(
         await catchMapKit<MapKitPlatformException>(
           () => harness.controller.addTileOverlay(
-            MKTileOverlay(id: const MKTileOverlayId('osm'), urlTemplate: 'u'),
+            .new(id: const .new('osm'), urlTemplate: 'u'),
           ),
         ),
       ).has((e) => e.code, 'code').equals('duplicate-id');

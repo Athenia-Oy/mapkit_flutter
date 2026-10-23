@@ -4,14 +4,14 @@ import 'package:mapkit_flutter/mapkit_flutter.dart';
 
 void main() {
   final osm = MKTileOverlay(
-    id: const MKTileOverlayId('osm'),
+    id: const .new('osm'),
     urlTemplate: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
   );
 
   group('MKTileOverlay wire mapping', () {
     test('serializes MKTileOverlay vocabulary', () {
       final platform = MKTileOverlay(
-        id: const MKTileOverlayId('osm'),
+        id: const .new('osm'),
         urlTemplate: 'https://t/{z}/{x}/{y}.png',
         minimumZ: 3,
         maximumZ: 17,
@@ -43,7 +43,7 @@ void main() {
     test('rejects an invalid z range or tileSize', () {
       check(
         () => MKTileOverlay(
-          id: const MKTileOverlayId('bad'),
+          id: const .new('bad'),
           urlTemplate: 'https://t/{z}/{x}/{y}.png',
           minimumZ: 10,
           maximumZ: 3,
@@ -51,14 +51,14 @@ void main() {
       ).throws<ArgumentError>();
       check(
         () => MKTileOverlay(
-          id: const MKTileOverlayId('bad'),
+          id: const .new('bad'),
           urlTemplate: 'https://t/{z}/{x}/{y}.png',
           minimumZ: -1,
         ),
       ).throws<ArgumentError>();
       check(
         () => MKTileOverlay(
-          id: const MKTileOverlayId('bad'),
+          id: const .new('bad'),
           urlTemplate: 'https://t/{z}/{x}/{y}.png',
           tileSize: 0,
         ),
@@ -68,7 +68,7 @@ void main() {
     test('rejects out of bounds alpha values', () {
       check(
         () => MKTileOverlay(
-          id: const MKTileOverlayId('bad'),
+          id: const .new('bad'),
           urlTemplate: 'https://t/{z}/{x}/{y}.png',
           alpha: -0.1,
         ),
@@ -76,7 +76,7 @@ void main() {
 
       check(
         () => MKTileOverlay(
-          id: const MKTileOverlayId('bad'),
+          id: const .new('bad'),
           urlTemplate: 'https://t/{z}/{x}/{y}.png',
           alpha: 1.1,
         ),
@@ -87,7 +87,7 @@ void main() {
       for (final alpha in <double>[0, 1]) {
         check(
           () => MKTileOverlay(
-            id: const MKTileOverlayId('edge'),
+            id: const .new('edge'),
             urlTemplate: 'https://t/{z}/{x}/{y}.png',
             alpha: alpha,
           ),
@@ -99,15 +99,15 @@ void main() {
   group('equality', () {
     test('compares by value', () {
       check(osm).equals(
-        MKTileOverlay(
-          id: const MKTileOverlayId('osm'),
+        .new(
+          id: const .new('osm'),
           urlTemplate: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
         ),
       );
       check(
         osm ==
-            MKTileOverlay(
-              id: const MKTileOverlayId('other'),
+            .new(
+              id: const .new('other'),
               urlTemplate: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
             ),
       ).isFalse();

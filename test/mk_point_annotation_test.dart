@@ -1,5 +1,3 @@
-import 'dart:ui' show Color, Offset;
-
 import 'package:checks/checks.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mapkit_flutter/mapkit_flutter.dart';
@@ -10,13 +8,13 @@ void main() {
   group('MKPointAnnotation wire mapping', () {
     test('serializes MKAnnotationView vocabulary', () {
       final platform = MKPointAnnotation(
-        id: const MKAnnotationId('a'),
+        id: const .new('a'),
         coordinate: applePark,
-        icon: const .marker(markerTintColor: Color(0xFF2266FF)),
+        icon: const .marker(markerTintColor: .new(0xFF2266FF)),
         title: 'Apple Park',
         subtitle: 'Cupertino',
         alpha: 0.8,
-        anchorPoint: const Offset(0.5, 0.5),
+        anchorPoint: const .new(0.5, 0.5),
         isDraggable: true,
         zPriority: 750,
         clusteringIdentifier: 'offices',
@@ -39,7 +37,7 @@ void main() {
       check(annotation('a').toPlatform().calloutConsumesTapEvents).isFalse();
       check(
         MKPointAnnotation(
-          id: const MKAnnotationId('a'),
+          id: const .new('a'),
           coordinate: applePark,
           calloutConsumesTapEvents: true,
         ).toPlatform().calloutConsumesTapEvents,
@@ -59,7 +57,7 @@ void main() {
     test('rejects out of bounds alpha values', () {
       check(
         () => MKPointAnnotation(
-          id: const MKAnnotationId('bad'),
+          id: const .new('bad'),
           coordinate: applePark,
           alpha: -0.1,
         ),
@@ -67,7 +65,7 @@ void main() {
 
       check(
         () => MKPointAnnotation(
-          id: const MKAnnotationId('bad'),
+          id: const .new('bad'),
           coordinate: applePark,
           alpha: 1.1,
         ),
@@ -78,7 +76,7 @@ void main() {
       for (final alpha in <double>[0, 1]) {
         check(
           () => MKPointAnnotation(
-            id: const MKAnnotationId('edge'),
+            id: const .new('edge'),
             coordinate: applePark,
             alpha: alpha,
           ),
@@ -89,8 +87,8 @@ void main() {
 
   group('equality', () {
     test('select and drag closure identity does not affect equality', () {
-      MKPointAnnotation withCallbacks() => MKPointAnnotation(
-        id: const MKAnnotationId('a'),
+      MKPointAnnotation withCallbacks() => .new(
+        id: const .new('a'),
         coordinate: applePark,
         onSelect: () {},
         onDragStart: (_) {},
@@ -106,16 +104,16 @@ void main() {
       'calloutConsumesTapEvents is explicit state, not callback presence',
       () {
         final plain = MKPointAnnotation(
-          id: const MKAnnotationId('a'),
+          id: const .new('a'),
           coordinate: applePark,
         );
         final consuming = MKPointAnnotation(
-          id: const MKAnnotationId('a'),
+          id: const .new('a'),
           coordinate: applePark,
           calloutConsumesTapEvents: true,
         );
         final withCallout = MKPointAnnotation(
-          id: const MKAnnotationId('a'),
+          id: const .new('a'),
           coordinate: applePark,
           calloutConsumesTapEvents: true,
           onCalloutTap: () {},
@@ -130,7 +128,7 @@ void main() {
     test('onCalloutTap without calloutConsumesTapEvents throws', () {
       check(
         () => MKPointAnnotation(
-          id: const MKAnnotationId('a'),
+          id: const .new('a'),
           coordinate: applePark,
           onCalloutTap: () {},
         ),
@@ -149,7 +147,7 @@ void main() {
         'a',
         title: 't',
       ).copyWith(coordinate: infiniteLoop, isDraggable: true);
-      check(moved.id).equals(const MKAnnotationId('a'));
+      check(moved.id).equals(const .new('a'));
       check(moved.coordinate).equals(infiniteLoop);
       check(moved.isDraggable).isTrue();
       check(moved.title).equals('t');
@@ -160,12 +158,12 @@ void main() {
     test('annotations sharing a clusteringIdentifier serialize it', () {
       final ids = [
         MKPointAnnotation(
-          id: const MKAnnotationId('a'),
+          id: const .new('a'),
           coordinate: applePark,
           clusteringIdentifier: 'stores',
         ),
         MKPointAnnotation(
-          id: const MKAnnotationId('b'),
+          id: const .new('b'),
           coordinate: infiniteLoop,
           clusteringIdentifier: 'stores',
         ),

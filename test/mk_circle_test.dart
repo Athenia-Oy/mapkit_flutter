@@ -1,5 +1,3 @@
-import 'dart:ui' show Color;
-
 import 'package:checks/checks.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mapkit_flutter/mapkit_flutter.dart';
@@ -10,11 +8,11 @@ void main() {
   group('MKCircle wire mapping', () {
     test('serializes renderer vocabulary', () {
       final platform = MKCircle(
-        id: const MKCircleId('radius'),
+        id: const .new('radius'),
         center: applePark,
         radius: 750,
-        fillColor: const Color(0x3300FF00),
-        strokeColor: const Color(0xFF112233),
+        fillColor: const .new(0x3300FF00),
+        strokeColor: const .new(0xFF112233),
         lineWidth: 2,
         zIndex: 1,
       ).toPlatform();
@@ -32,15 +30,11 @@ void main() {
     test('rejects negative or non-finite radius and lineWidth', () {
       for (final bad in [-1.0, double.nan, double.infinity]) {
         check(
-          () => MKCircle(
-            id: const MKCircleId('bad'),
-            center: applePark,
-            radius: bad,
-          ),
+          () => MKCircle(id: const .new('bad'), center: applePark, radius: bad),
         ).throws<ArgumentError>();
         check(
           () => MKCircle(
-            id: const MKCircleId('bad'),
+            id: const .new('bad'),
             center: applePark,
             radius: 100,
             lineWidth: bad,

@@ -34,25 +34,22 @@ void main() {
             width: 300,
             height: 300,
             child: MKMapView(
-              initialCamera: MKMapCamera(
-                centerCoordinate: CLLocationCoordinate2D(
-                  latitude: 37.33,
-                  longitude: -122,
-                ),
+              initialCamera: .new(
+                centerCoordinate: .new(latitude: 37.33, longitude: -122),
                 distance: 2000,
               ),
             ),
           ),
         ),
       );
-      await tester.pumpAndSettle(const Duration(milliseconds: 200));
-      await Future<void>.delayed(const Duration(milliseconds: 500));
+      await tester.pumpAndSettle(const .new(milliseconds: 200));
+      await Future<void>.delayed(const .new(milliseconds: 500));
       for (var id = 0; id < 20; id++) {
         if (!live.contains(id) && await answers(id)) live.add(id);
       }
       await tester.pumpWidget(const SizedBox());
       await tester.pumpAndSettle();
-      await Future<void>.delayed(const Duration(milliseconds: 500));
+      await Future<void>.delayed(const .new(milliseconds: 500));
     }
     debugPrint('leak-oracle map view ids seen alive while mounted: $live');
     check(live, because: 'probe found each mounted map').length.equals(3);

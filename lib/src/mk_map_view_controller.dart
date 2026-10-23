@@ -125,9 +125,7 @@ abstract interface class MKMapViewController {
   ///
   /// Throws a [MapKitPlatformException] with code `snapshot-failed` when the
   /// snapshotter fails (e.g. tile loading) or produces no image data.
-  Future<Uint8List> takeSnapshot([
-    MKMapSnapshotOptions options = const MKMapSnapshotOptions(),
-  ]);
+  Future<Uint8List> takeSnapshot([MKMapSnapshotOptions options = const .new()]);
 
   /// Open the Look Around (street-view) experience for a coordinate (iOS).
   ///
@@ -174,7 +172,7 @@ final class MKMapViewControllerImpl implements MKMapViewController {
     @visibleForTesting MapKitHostApi? hostApi,
   }) {
     final suffix = '$viewId';
-    final host = hostApi ?? MapKitHostApi(messageChannelSuffix: suffix);
+    final host = hostApi ?? .new(messageChannelSuffix: suffix);
     return ._(host, sink, suffix);
   }
 
@@ -251,14 +249,14 @@ final class MKMapViewControllerImpl implements MKMapViewController {
   Future<Offset?> convertToPoint(CLLocationCoordinate2D coordinate) => _enqueue(
     () async => switch (await _host.convertToPoint(coordinate.toPlatform())) {
       null => null,
-      final point => Offset(point.x, point.y),
+      final point => .new(point.x, point.y),
     },
   );
 
   @override
   Future<CLLocationCoordinate2D?> convertToCoordinate(Offset point) => _enqueue(
     () async => switch (await _host.convertToCoordinate(
-      PlatformPoint(x: point.dx, y: point.dy),
+      .new(x: point.dx, y: point.dy),
     )) {
       null => null,
       final coordinate => .fromPlatform(coordinate),
@@ -279,7 +277,7 @@ final class MKMapViewControllerImpl implements MKMapViewController {
 
   @override
   Future<Uint8List> takeSnapshot([
-    MKMapSnapshotOptions options = const MKMapSnapshotOptions(),
+    MKMapSnapshotOptions options = const .new(),
   ]) => _enqueue(() => _host.takeSnapshot(options.toPlatform()));
 
   @override
@@ -307,7 +305,7 @@ final class MKMapViewControllerImpl implements MKMapViewController {
     required Set<MKCircle> circles,
   }) => _enqueue(
     () => _host.initialize(
-      PlatformMapViewCreationParams(
+      .new(
         initialCamera: initialCamera.toPlatform(),
         configuration: configuration,
         annotations: [for (final a in annotations) a.toPlatform()],
@@ -389,11 +387,11 @@ final class _MKMapViewFlutterApi(final MKMapViewEventSink _sink)
 
   @override
   void onAnnotationSelect(String annotationId) =>
-      _sink.onAnnotationSelect(MKAnnotationId(annotationId));
+      _sink.onAnnotationSelect(.new(annotationId));
 
   @override
   void onAnnotationDeselect(String annotationId) =>
-      _sink.onAnnotationDeselect(MKAnnotationId(annotationId));
+      _sink.onAnnotationDeselect(.new(annotationId));
 
   @override
   void onMapFeatureSelected(PlatformMapFeature feature) =>
@@ -404,7 +402,7 @@ final class _MKMapViewFlutterApi(final MKMapViewEventSink _sink)
     String annotationId,
     PlatformCoordinate coordinate,
   ) => _sink.onAnnotationDragStart(
-    MKAnnotationId(annotationId),
+    .new(annotationId),
     .fromPlatform(coordinate),
   );
 
@@ -412,25 +410,21 @@ final class _MKMapViewFlutterApi(final MKMapViewEventSink _sink)
   void onAnnotationDragEnd(
     String annotationId,
     PlatformCoordinate coordinate,
-  ) => _sink.onAnnotationDragEnd(
-    MKAnnotationId(annotationId),
-    .fromPlatform(coordinate),
-  );
+  ) => _sink.onAnnotationDragEnd(.new(annotationId), .fromPlatform(coordinate));
 
   @override
   void onCalloutTap(String annotationId) =>
-      _sink.onCalloutTap(MKAnnotationId(annotationId));
+      _sink.onCalloutTap(.new(annotationId));
 
   @override
   void onPolylineTap(String polylineId) =>
-      _sink.onPolylineTap(MKPolylineId(polylineId));
+      _sink.onPolylineTap(.new(polylineId));
 
   @override
-  void onPolygonTap(String polygonId) =>
-      _sink.onPolygonTap(MKPolygonId(polygonId));
+  void onPolygonTap(String polygonId) => _sink.onPolygonTap(.new(polygonId));
 
   @override
-  void onCircleTap(String circleId) => _sink.onCircleTap(MKCircleId(circleId));
+  void onCircleTap(String circleId) => _sink.onCircleTap(.new(circleId));
 
   @override
   void onMapTap(PlatformCoordinate coordinate) =>

@@ -27,7 +27,7 @@ final class const MKMapFeature({
 
   /// Constructs a map feature from its Pigeon wire representation.
   @internal
-  factory fromPlatform(PlatformMapFeature p) => MKMapFeature(
+  factory fromPlatform(PlatformMapFeature p) => .new(
     featureType: p.featureType,
     coordinate: .fromPlatform(p.coordinate),
     title: p.title,

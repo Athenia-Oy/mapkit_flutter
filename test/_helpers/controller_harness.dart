@@ -11,16 +11,12 @@ import 'recording_sink.dart';
 /// outbound/inbound channel tests.
 final class ControllerHarness {
   factory({int viewId = 1, RecordingSink? sink}) {
-    final effectiveSink = sink ?? RecordingSink();
+    final effectiveSink = sink ?? .new();
     final host = FakeHostApi();
     return ._(
       sink: effectiveSink,
       host: host,
-      controller: MKMapViewControllerImpl(
-        viewId: viewId,
-        sink: effectiveSink,
-        hostApi: host,
-      ),
+      controller: .new(viewId: viewId, sink: effectiveSink, hostApi: host),
     );
   }
 
@@ -40,22 +36,19 @@ final class ControllerHarness {
 
   void expectCalls(List<String> names) => host.expectCalls(names);
 
-  CameraCall expectSetCamera() =>
-      host.calls.expectLastArgs<CameraCall>('setCamera');
+  CameraCall expectSetCamera() => host.calls.expectLastArgs('setCamera');
 
-  CoordinateCall expectSetCenter() =>
-      host.calls.expectLastArgs<CoordinateCall>('setCenter');
+  CoordinateCall expectSetCenter() => host.calls.expectLastArgs('setCenter');
 
-  RegionCall expectSetRegion() =>
-      host.calls.expectLastArgs<RegionCall>('setRegion');
+  RegionCall expectSetRegion() => host.calls.expectLastArgs('setRegion');
 
   void expectLastCall(String name) =>
       check(host.calls.lastRecorded().name).equals(name);
 
-  T expectLast<T>(String name) => host.calls.expectLastArgs<T>(name);
+  T expectLast<T>(String name) => host.calls.expectLastArgs(name);
 
   T expectSink<T>(String event) =>
-      sink.events.requireSinglePayload<T>(event: event);
+      sink.events.requireSinglePayload(event: event);
 
   List<String> get eventNames => [for (final e in sink.events) e.$1];
 }

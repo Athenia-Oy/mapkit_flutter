@@ -13,7 +13,7 @@ void main() {
 
     test('rejects out-of-range or non-finite deltas', () {
       MKCoordinateSpan span(double lat, double lng) =>
-          MKCoordinateSpan(latitudeDelta: lat, longitudeDelta: lng);
+          .new(latitudeDelta: lat, longitudeDelta: lng);
       check(() => span(-1, 0)).throws<ArgumentError>();
       check(() => span(0, -1)).throws<ArgumentError>();
       check(() => span(180.1, 0)).throws<ArgumentError>();

@@ -51,10 +51,10 @@ class _HomePageState extends State<HomePage> {
   );
 
   static final _pins = <(MKAnnotationId, CLLocationCoordinate2D, String)>[
-    (const MKAnnotationId('apple-park'), _applePark, 'Apple Park'),
-    (const MKAnnotationId('infinite-loop'), _infiniteLoop, 'Infinite Loop'),
-    (const MKAnnotationId('de-anza'), _deAnza, 'De Anza'),
-    (const MKAnnotationId('main-street'), _mainStreet, 'Main Street'),
+    (const .new('apple-park'), _applePark, 'Apple Park'),
+    (const .new('infinite-loop'), _infiniteLoop, 'Infinite Loop'),
+    (const .new('de-anza'), _deAnza, 'De Anza'),
+    (const .new('main-street'), _mainStreet, 'Main Street'),
   ];
 
   MKMapViewController? _controller;
@@ -63,16 +63,16 @@ class _HomePageState extends State<HomePage> {
   // Per-pin styling, mutated in place. A non-null custom image makes the pin a
   // custom Flutter-widget marker; otherwise it is a native system marker.
   final Map<MKAnnotationId, PinStyle> _styles = {
-    const MKAnnotationId('apple-park'): const PinStyle(
-      tint: Color(0xFF3F51B5),
+    const .new('apple-park'): const .new(
+      tint: .new(0xFF3F51B5),
       glyph: 'building.2.fill',
     ),
-    const MKAnnotationId('infinite-loop'): const PinStyle(
-      tint: Color(0xFF009688),
+    const .new('infinite-loop'): const .new(
+      tint: .new(0xFF009688),
       glyph: 'laptopcomputer',
     ),
-    const MKAnnotationId('de-anza'): const PinStyle(
-      tint: Color(0xFFFF9800),
+    const .new('de-anza'): const .new(
+      tint: .new(0xFFFF9800),
       glyph: 'graduationcap.fill',
     ),
   };
@@ -83,14 +83,14 @@ class _HomePageState extends State<HomePage> {
   MKAnnotationId? _selectedId = _pins.first.$1;
 
   // Off-screen host used to rasterize a Flutter widget into a marker image.
-  final GlobalKey _captureKey = GlobalKey();
+  final GlobalKey _captureKey = .new();
   Widget? _captureChild;
 
   bool _suppressed = false;
 
   final Set<MKPolyline> _polylines = {
     .geodesic(
-      id: const MKPolylineId('campus-to-sf'),
+      id: const .new('campus-to-sf'),
       coordinates: [_applePark, _sanFrancisco],
       lineWidth: 4,
       gradientColors: [Colors.blue, Colors.purple],
@@ -98,26 +98,26 @@ class _HomePageState extends State<HomePage> {
   };
 
   final Set<MKPolygon> _polygons = {
-    MKPolygon(
-      id: const MKPolygonId('campus-zone'),
+    .new(
+      id: const .new('campus-zone'),
       coordinates: [
-        CLLocationCoordinate2D(latitude: 37.3380, longitude: -122.0150),
-        CLLocationCoordinate2D(latitude: 37.3380, longitude: -122.0035),
-        CLLocationCoordinate2D(latitude: 37.3310, longitude: -122.0035),
-        CLLocationCoordinate2D(latitude: 37.3310, longitude: -122.0150),
+        .new(latitude: 37.3380, longitude: -122.0150),
+        .new(latitude: 37.3380, longitude: -122.0035),
+        .new(latitude: 37.3310, longitude: -122.0035),
+        .new(latitude: 37.3310, longitude: -122.0150),
       ],
-      fillColor: const Color(0x2200AA00),
+      fillColor: const .new(0x2200AA00),
       strokeColor: Colors.green,
       lineWidth: 2,
     ),
   };
 
   final Set<MKCircle> _circles = {
-    MKCircle(
-      id: const MKCircleId('loop-radius'),
+    .new(
+      id: const .new('loop-radius'),
       center: _infiniteLoop,
       radius: 250,
-      fillColor: const Color(0x22FF8800),
+      fillColor: const .new(0x22FF8800),
       strokeColor: Colors.orange,
       lineWidth: 2,
     ),
@@ -129,11 +129,11 @@ class _HomePageState extends State<HomePage> {
     // Show one custom Flutter-widget marker from the start, alongside the
     // native markers, so both kinds are visible on launch.
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      _setCustomMarker(const MKAnnotationId('main-street'), 'Main St');
+      _setCustomMarker(const .new('main-street'), 'Main St');
     });
   }
 
-  PinStyle _styleOf(MKAnnotationId id) => _styles[id] ?? const PinStyle();
+  PinStyle _styleOf(MKAnnotationId id) => _styles[id] ?? const .new();
 
   String _titleOf(MKAnnotationId id) => _pins.firstWhere((p) => p.$1 == id).$3;
 
@@ -155,15 +155,15 @@ class _HomePageState extends State<HomePage> {
             markerTintColor: style.tint,
             systemImage: style.glyph,
           );
-    return MKPointAnnotation(
+    return .new(
       id: id,
       coordinate: coordinate,
       icon: icon,
       // A custom image is centred on the coordinate; system markers anchor
       // themselves, so the value is ignored for them.
       anchorPoint: customImage != null
-          ? const Offset(0.5, 0.5)
-          : const Offset(0.5, 1),
+          ? const .new(0.5, 0.5)
+          : const .new(0.5, 1),
       title: title,
       subtitle: style.subtitle,
       onSelect: () => setState(() => _selectedId = id),
@@ -255,7 +255,7 @@ class _HomePageState extends State<HomePage> {
   /// pooled views — the reused pins must come back correctly styled.
   Future<void> _rebuildAll() async {
     setState(() => _suppressed = true);
-    await Future<void>.delayed(const Duration(milliseconds: 350));
+    await Future<void>.delayed(const .new(milliseconds: 350));
     if (!mounted) return;
     setState(() => _suppressed = false);
   }
@@ -280,7 +280,7 @@ class _HomePageState extends State<HomePage> {
     ScaffoldMessenger.of(context)
       ..hideCurrentSnackBar()
       ..showSnackBar(
-        SnackBar(content: Text(message), duration: const Duration(seconds: 1)),
+        .new(content: Text(message), duration: const .new(seconds: 1)),
       );
   }
 
@@ -329,7 +329,7 @@ class _HomePageState extends State<HomePage> {
       appBar: AppBar(
         title: const Text('MapKit Flutter'),
         actions: [
-          PopupMenuButton<MKMapConfiguration>(
+          PopupMenuButton(
             tooltip: 'Map style',
             icon: const Icon(Icons.map),
             onSelected: (config) => setState(() => _configuration = config),
@@ -368,11 +368,8 @@ class _HomePageState extends State<HomePage> {
       body: Stack(
         children: [
           MKMapView(
-            initialCamera: MKMapCamera(
-              centerCoordinate: CLLocationCoordinate2D(
-                latitude: 37.3275,
-                longitude: -122.0270,
-              ),
+            initialCamera: .new(
+              centerCoordinate: .new(latitude: 37.3275, longitude: -122.0270),
               distance: 9000,
             ),
             preferredConfiguration: _configuration,

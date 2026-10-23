@@ -7,9 +7,9 @@ void main() {
   // MKPointAnnotation stands in for every map object — the diff is keyed only
   // by the `idOf` string, so the same logic drives polylines/polygons/circles.
   MKPointAnnotation marker(String id, double lat, double lng) {
-    return MKPointAnnotation(
-      id: MKAnnotationId(id),
-      coordinate: CLLocationCoordinate2D(latitude: lat, longitude: lng),
+    return .new(
+      id: .new(id),
+      coordinate: .new(latitude: lat, longitude: lng),
     );
   }
 

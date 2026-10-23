@@ -6,7 +6,7 @@ void main() {
   group('MapItemId', () {
     test('equal value and type compare equal', () {
       const a = MKAnnotationId('a');
-      check(a).equals(const MKAnnotationId('a'));
+      check(a).equals(const .new('a'));
       check(a.hashCode).equals(const MKAnnotationId('a').hashCode);
     });
 

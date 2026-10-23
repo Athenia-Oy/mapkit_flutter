@@ -1,5 +1,4 @@
 import 'package:checks/checks.dart';
-import 'package:flutter/painting.dart' show Color;
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mapkit_flutter_example/restyle_lab.dart';
 
@@ -21,7 +20,7 @@ void main() {
     });
 
     test('withNextGlyph advances while preserving tint and subtitle', () {
-      const start = PinStyle(tint: Color(0xFF009688), subtitle: 'keep me');
+      const start = PinStyle(tint: .new(0xFF009688), subtitle: 'keep me');
       final next = start.withNextGlyph();
 
       check(next.glyph).equals(glyphPalette[1]);
@@ -39,16 +38,16 @@ void main() {
 
     test('reset clears every field to the defaults', () {
       const style = PinStyle(
-        tint: Color(0xFFE91E63),
+        tint: .new(0xFFE91E63),
         glyph: 'star.fill',
         subtitle: 'x',
       );
-      check(style.reset()).equals(const PinStyle());
+      check(style.reset()).equals(const .new());
     });
 
     test('value equality distinguishes a restyle from the original', () {
-      const a = PinStyle(tint: Color(0xFF3F51B5));
-      check(a).equals(const PinStyle(tint: Color(0xFF3F51B5)));
+      const a = PinStyle(tint: .new(0xFF3F51B5));
+      check(a).equals(const .new(tint: .new(0xFF3F51B5)));
       check(a == a.withNextTint()).isFalse();
     });
   });

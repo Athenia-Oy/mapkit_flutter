@@ -70,7 +70,7 @@ void main() {
       Set<MKPolyline> polylines = const {},
     }) => MaterialApp(
       home: MKMapView(
-        initialCamera: MKMapCamera(centerCoordinate: applePark, distance: 1500),
+        initialCamera: .new(centerCoordinate: applePark, distance: 1500),
         annotations: annotations,
         polylines: polylines,
         onMapCreated: (c) => controller ??= c,
@@ -84,13 +84,13 @@ void main() {
       await tester.pumpWidget(
         map(annotations: annotations, polylines: polylines),
       );
-      await tester.pump(const Duration(milliseconds: 500));
+      await tester.pump(const .new(milliseconds: 500));
     }
 
     await pump();
-    final deadline = DateTime.now().add(const Duration(seconds: 30));
+    final deadline = DateTime.now().add(const .new(seconds: 30));
     while (controller == null && DateTime.now().isBefore(deadline)) {
-      await tester.pump(const Duration(milliseconds: 100));
+      await tester.pump(const .new(milliseconds: 100));
     }
     final ctrl = controller;
     if (ctrl == null) {
@@ -99,10 +99,10 @@ void main() {
 
     // The visible region becomes meaningful once the view has layout; a cold
     // simulator can take a while, so this wait gets its own deadline.
-    final regionDeadline = DateTime.now().add(const Duration(seconds: 45));
+    final regionDeadline = DateTime.now().add(const .new(seconds: 45));
     var maybeRegion = await ctrl.region;
     while (maybeRegion == null && DateTime.now().isBefore(regionDeadline)) {
-      await tester.pump(const Duration(milliseconds: 250));
+      await tester.pump(const .new(milliseconds: 250));
       maybeRegion = await ctrl.region;
     }
     final region = maybeRegion;
@@ -110,7 +110,7 @@ void main() {
     check(region.span.latitudeDelta).isGreaterThan(0);
 
     // Let tiles settle so paired snapshots share a stable base map.
-    await tester.pump(const Duration(seconds: 4));
+    await tester.pump(const .new(seconds: 4));
 
     final viewSize = tester.getSize(find.byType(MKMapView));
     final center = region.center;
@@ -133,7 +133,7 @@ void main() {
       required bool overlays,
     }) async {
       final bytes = await ctrl.takeSnapshot(
-        MKMapSnapshotOptions(
+        .new(
           showsPointsOfInterest: false,
           showsAnnotations: annotations,
           showsOverlays: overlays,
@@ -145,18 +145,9 @@ void main() {
     // --- Annotation culling -------------------------------------------------
     await pump(
       annotations: {
-        MKPointAnnotation(
-          id: const MKAnnotationId('center'),
-          coordinate: center,
-        ),
-        MKPointAnnotation(
-          id: const MKAnnotationId('edge'),
-          coordinate: edgeCoordinate,
-        ),
-        MKPointAnnotation(
-          id: const MKAnnotationId('far'),
-          coordinate: farCoordinate,
-        ),
+        .new(id: const .new('center'), coordinate: center),
+        .new(id: const .new('edge'), coordinate: edgeCoordinate),
+        .new(id: const .new('far'), coordinate: farCoordinate),
       },
     );
 
@@ -227,10 +218,10 @@ void main() {
     );
     await pump(
       polylines: {
-        MKPolyline(
-          id: const MKPolylineId('segment'),
+        .new(
+          id: const .new('segment'),
           coordinates: [lineStart, lineEnd],
-          strokeColor: const Color(0xFFFF00FF),
+          strokeColor: const .new(0xFFFF00FF),
           lineWidth: 12,
         ),
       },
@@ -239,7 +230,7 @@ void main() {
     final lineOn = await snap(annotations: false, overlays: true);
     final lineOff = await snap(annotations: false, overlays: false);
     final quarterPx = await project(
-      CLLocationCoordinate2D(
+      .new(
         latitude: center.latitude,
         longitude: center.longitude - lonSpan / 8,
       ),
@@ -257,10 +248,10 @@ void main() {
     // (a 12pt dot at 3x would be >1000 px; observed noise stays <100).
     await pump(
       polylines: {
-        MKPolyline(
-          id: const MKPolylineId('dot'),
+        .new(
+          id: const .new('dot'),
           coordinates: [center],
-          strokeColor: const Color(0xFFFF00FF),
+          strokeColor: const .new(0xFFFF00FF),
           lineWidth: 12,
         ),
       },

@@ -1,10 +1,8 @@
 import 'dart:math' show max, min, pow;
-import 'dart:ui' show Offset;
 
 import 'package:mapkit_flutter/src/_internal/validate.dart';
 import 'package:mapkit_flutter/src/cl_location_coordinate_2d.dart';
 import 'package:mapkit_flutter/src/mk_coordinate_region.dart';
-import 'package:mapkit_flutter/src/mk_coordinate_span.dart';
 import 'package:mapkit_flutter/src/mk_map_camera.dart';
 import 'package:mapkit_flutter/src/mk_map_view_controller.dart';
 
@@ -70,7 +68,7 @@ extension CameraConveniences on MKMapViewController {
     final current = await _laidOutCamera('scrollBy');
     final centerPoint = await convertToPoint(current.centerCoordinate);
     if (centerPoint == null) throw _noLayout('scrollBy');
-    final target = await convertToCoordinate(centerPoint + Offset(dx, dy));
+    final target = await convertToCoordinate(centerPoint + .new(dx, dy));
     if (target == null) throw _noLayout('scrollBy');
     await setCenter(target, animated: animated);
   }
@@ -105,9 +103,9 @@ extension CameraConveniences on MKMapViewController {
     double fit(double delta, double limit) =>
         min(max(delta * (1 + 2 * padding), minimumSpan), limit);
     await setRegion(
-      MKCoordinateRegion(
+      .new(
         center: region.center,
-        span: MKCoordinateSpan(
+        span: .new(
           latitudeDelta: fit(region.span.latitudeDelta, 180),
           longitudeDelta: fit(region.span.longitudeDelta, 360),
         ),
@@ -120,5 +118,5 @@ extension CameraConveniences on MKMapViewController {
       await camera ?? (throw _noLayout(method));
 
   StateError _noLayout(String method) =>
-      StateError('$method needs a laid-out map view (no layout yet).');
+      .new('$method needs a laid-out map view (no layout yet).');
 }

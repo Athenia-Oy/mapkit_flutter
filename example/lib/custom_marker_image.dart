@@ -16,16 +16,16 @@ Future<Uint8List> renderCircleMarkerPng(Color color, {int size = 96}) async {
   const white = Color(0xFFFFFFFF);
 
   canvas
-    ..drawCircle(center, d / 2, Paint()..color = color)
+    ..drawCircle(center, d / 2, .new()..color = color)
     ..drawCircle(
       center,
       d / 2 - d * 0.06,
-      Paint()
+      .new()
         ..style = .stroke
         ..strokeWidth = d * 0.08
         ..color = white,
     )
-    ..drawCircle(center, d * 0.18, Paint()..color = white);
+    ..drawCircle(center, d * 0.18, .new()..color = white);
 
   final image = await recorder.endRecording().toImage(size, size);
   final data = await image.toByteData(format: .png);

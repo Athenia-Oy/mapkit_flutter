@@ -28,10 +28,10 @@ final class MKCircle({
   required final double radius,
 
   /// Interior fill color (`MKCircleRenderer.fillColor`).
-  final Color fillColor = const Color(0x00000000),
+  final Color fillColor = const .new(0x00000000),
 
   /// Outline stroke color (`MKCircleRenderer.strokeColor`).
-  final Color strokeColor = const Color(0xFF000000),
+  final Color strokeColor = const .new(0xFF000000),
 
   /// Stroke width in points (`lineWidth`).
   final double lineWidth = 10,
@@ -77,7 +77,7 @@ final class MKCircle({
     bool? consumeTapEvents,
     MKOverlayLevel? level,
     VoidCallback? onTap = keepCallback,
-  }) => MKCircle(
+  }) => .new(
     id: id,
     center: center ?? this.center,
     radius: radius ?? this.radius,
@@ -93,7 +93,7 @@ final class MKCircle({
 
   /// Converts this circle to its Pigeon wire representation.
   @internal
-  PlatformCircle toPlatform() => PlatformCircle(
+  PlatformCircle toPlatform() => .new(
     id: id.value,
     center: center.toPlatform(),
     radius: radius,

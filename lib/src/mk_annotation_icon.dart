@@ -78,7 +78,7 @@ final class MKAnnotationIcon {
 
   /// Converts this icon to its Pigeon wire representation.
   @internal
-  PlatformAnnotationIcon toPlatform() => PlatformAnnotationIcon(
+  PlatformAnnotationIcon toPlatform() => .new(
     type: _type,
     markerTintArgb: _markerTintColor?.toARGB32(),
     glyphText: _glyphText,

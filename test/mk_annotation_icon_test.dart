@@ -1,4 +1,4 @@
-import 'dart:ui' show Color, PlatformDispatcher;
+import 'dart:ui' show PlatformDispatcher;
 
 import 'package:checks/checks.dart';
 import 'package:flutter/foundation.dart' show FlutterError;
@@ -21,10 +21,10 @@ void main() {
 
     test('serializes MKMarkerAnnotationView styling as ARGB32', () {
       final platform = const MKAnnotationIcon.marker(
-        markerTintColor: Color(0xFF112233),
+        markerTintColor: .new(0xFF112233),
         glyphText: 'HQ',
         systemImage: 'star.fill',
-        glyphTintColor: Color(0xFFFFFFFF),
+        glyphTintColor: .new(0xFFFFFFFF),
       ).toPlatform();
       check(platform.markerTintArgb).equals(0xFF112233);
       check(platform.glyphText).equals('HQ');
@@ -79,9 +79,7 @@ void main() {
 
   group('equality', () {
     test('markers compare by full styling', () {
-      const tinted = MKAnnotationIcon.marker(
-        markerTintColor: Color(0xFF112233),
-      );
+      const tinted = MKAnnotationIcon.marker(markerTintColor: .new(0xFF112233));
       check(tinted).equals(tinted);
       check(tinted == const .marker()).isFalse();
     });
@@ -104,7 +102,7 @@ void main() {
     });
 
     test('marker and image never compare equal', () {
-      check(const MKAnnotationIcon.marker() == .image(Uint8List(0))).isFalse();
+      check(const MKAnnotationIcon.marker() == .image(.new(0))).isFalse();
     });
   });
 }
@@ -117,7 +115,7 @@ final class _FakeAssetBundle(final Map<String, ByteData> _assets)
       return const StandardMessageCodec().encodeMessage(
             const <String, List<Object>>{},
           ) ??
-          ByteData(0);
+          .new(0);
     }
     final data = _assets[key];
     if (data == null) {

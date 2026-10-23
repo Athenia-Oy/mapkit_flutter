@@ -43,7 +43,7 @@ final class MKMapCamera({
 
   /// Constructs a camera from its Pigeon wire representation.
   @internal
-  factory fromPlatform(PlatformMapCamera p) => MKMapCamera(
+  factory fromPlatform(PlatformMapCamera p) => .new(
     centerCoordinate: .fromPlatform(p.centerCoordinate),
     distance: p.distance,
     heading: p.heading,
@@ -60,7 +60,7 @@ final class MKMapCamera({
     required double zoomLevel,
     double heading = 0.0,
     double pitch = 0.0,
-  }) => MKMapCamera(
+  }) => .new(
     centerCoordinate: centerCoordinate,
     distance: _zoomBaseDistance / pow(2.0, zoomLevel - 1),
     heading: heading,
@@ -81,7 +81,7 @@ final class MKMapCamera({
     double? distance,
     double? heading,
     double? pitch,
-  }) => MKMapCamera(
+  }) => .new(
     centerCoordinate: centerCoordinate ?? this.centerCoordinate,
     distance: distance ?? this.distance,
     heading: heading ?? this.heading,
@@ -90,7 +90,7 @@ final class MKMapCamera({
 
   /// Converts this camera to its Pigeon wire representation.
   @internal
-  PlatformMapCamera toPlatform() => PlatformMapCamera(
+  PlatformMapCamera toPlatform() => .new(
     centerCoordinate: centerCoordinate.toPlatform(),
     distance: distance,
     heading: heading,

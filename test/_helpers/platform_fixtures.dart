@@ -1,22 +1,19 @@
 import 'package:mapkit_flutter/src/messages.g.dart';
 
 PlatformCoordinate platformCoord(double latitude, double longitude) =>
-    PlatformCoordinate(latitude: latitude, longitude: longitude);
+    .new(latitude: latitude, longitude: longitude);
 
 PlatformCoordinateSpan platformSpan({
   double latitudeDelta = 0,
   double longitudeDelta = 0,
-}) => PlatformCoordinateSpan(
-  latitudeDelta: latitudeDelta,
-  longitudeDelta: longitudeDelta,
-);
+}) => .new(latitudeDelta: latitudeDelta, longitudeDelta: longitudeDelta);
 
 PlatformCoordinateRegion platformRegion({
   double latitude = 0,
   double longitude = 0,
   double latitudeDelta = 0,
   double longitudeDelta = 0,
-}) => PlatformCoordinateRegion(
+}) => .new(
   center: platformCoord(latitude, longitude),
   span: platformSpan(
     latitudeDelta: latitudeDelta,
@@ -30,11 +27,11 @@ PlatformMapCamera platformCamera({
   double distance = 1000,
   double heading = 0,
   double pitch = 0,
-}) => PlatformMapCamera(
+}) => .new(
   centerCoordinate: platformCoord(latitude, longitude),
   distance: distance,
   heading: heading,
   pitch: pitch,
 );
 
-PlatformPoint platformPoint(double x, double y) => PlatformPoint(x: x, y: y);
+PlatformPoint platformPoint(double x, double y) => .new(x: x, y: y);

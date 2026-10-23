@@ -32,7 +32,7 @@ final class MKPolyline {
   new({
     required this.id,
     required this.coordinates,
-    this.strokeColor = const Color(0xFF000000),
+    this.strokeColor = const .new(0xFF000000),
     this.lineWidth = 10,
     this.lineCap = .round,
     this.lineJoin = .round,
@@ -53,7 +53,7 @@ final class MKPolyline {
   new geodesic({
     required this.id,
     required this.coordinates,
-    this.strokeColor = const Color(0xFF000000),
+    this.strokeColor = const .new(0xFF000000),
     this.lineWidth = 10,
     this.lineCap = .round,
     this.lineJoin = .round,
@@ -182,7 +182,7 @@ final class MKPolyline {
 
   /// Converts this polyline to its Pigeon wire representation.
   @internal
-  PlatformPolyline toPlatform() => PlatformPolyline(
+  PlatformPolyline toPlatform() => .new(
     id: id.value,
     coordinates: coordinates.map((c) => c.toPlatform()).toList(),
     strokeColorArgb: strokeColor.toARGB32(),

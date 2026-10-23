@@ -50,7 +50,7 @@ final class MKCameraZoomRange {
 
   /// Converts this zoom range to its Pigeon wire representation.
   @internal
-  PlatformCameraZoomRange toPlatform() => PlatformCameraZoomRange(
+  PlatformCameraZoomRange toPlatform() => .new(
     minCenterCoordinateDistance: minCenterCoordinateDistance,
     maxCenterCoordinateDistance: maxCenterCoordinateDistance,
   );

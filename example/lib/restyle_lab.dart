@@ -6,11 +6,11 @@ import 'package:flutter/painting.dart' show Color;
 /// reset-to-default (nil) path the 0.2.2 fix added to `applyMarkerStyle`.
 const tintPalette = <Color?>[
   null,
-  Color(0xFF3F51B5), // indigo
-  Color(0xFF009688), // teal
-  Color(0xFFFF9800), // orange
-  Color(0xFFE91E63), // pink
-  Color(0xFF4CAF50), // green
+  .new(0xFF3F51B5), // indigo
+  .new(0xFF009688), // teal
+  .new(0xFFFF9800), // orange
+  .new(0xFFE91E63), // pink
+  .new(0xFF4CAF50), // green
 ];
 
 /// SF Symbol glyph options. `null` clears the glyph back to MapKit's default
@@ -44,28 +44,22 @@ class const PinStyle({
   final String? subtitle,
 }) {
   /// Advance `markerTintColor` to the next palette entry (wraps).
-  PinStyle withNextTint() => PinStyle(
-    tint: _next(tintPalette, tint),
-    glyph: glyph,
-    subtitle: subtitle,
-  );
+  PinStyle withNextTint() =>
+      .new(tint: _next(tintPalette, tint), glyph: glyph, subtitle: subtitle);
 
   /// Advance the SF Symbol glyph to the next palette entry (wraps).
-  PinStyle withNextGlyph() => PinStyle(
-    tint: tint,
-    glyph: _next(glyphPalette, glyph),
-    subtitle: subtitle,
-  );
+  PinStyle withNextGlyph() =>
+      .new(tint: tint, glyph: _next(glyphPalette, glyph), subtitle: subtitle);
 
   /// Advance the callout subtitle to the next palette entry (wraps).
-  PinStyle withNextSubtitle() => PinStyle(
+  PinStyle withNextSubtitle() => .new(
     tint: tint,
     glyph: glyph,
     subtitle: _next(subtitlePalette, subtitle),
   );
 
   /// Clear every field back to MapKit's defaults.
-  PinStyle reset() => const PinStyle();
+  PinStyle reset() => const .new();
 
   @override
   bool operator ==(Object other) =>

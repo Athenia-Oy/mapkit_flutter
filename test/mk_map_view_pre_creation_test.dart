@@ -71,11 +71,8 @@ void main() {
     return (createGate: createGate, hostCalls: hostCalls, nativeTap: nativeTap);
   }
 
-  MKPointAnnotation ann(String id, VoidCallback onSelect) => MKPointAnnotation(
-    id: MKAnnotationId(id),
-    coordinate: applePark,
-    onSelect: onSelect,
-  );
+  MKPointAnnotation ann(String id, VoidCallback onSelect) =>
+      .new(id: .new(id), coordinate: applePark, onSelect: onSelect);
 
   Widget map(Set<MKPointAnnotation> annotations) => Directionality(
     textDirection: .ltr,

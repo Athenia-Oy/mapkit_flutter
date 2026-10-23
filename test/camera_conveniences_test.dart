@@ -96,8 +96,8 @@ void main() {
     test('sets the containing region', () async {
       final harness = buildHarness();
       await harness.controller.fitCoordinates([
-        CLLocationCoordinate2D(latitude: 10, longitude: 20),
-        CLLocationCoordinate2D(latitude: 30, longitude: 40),
+        .new(latitude: 10, longitude: 20),
+        .new(latitude: 30, longitude: 40),
       ], animated: false);
       harness.expectCalls(['setRegion']);
       final (region, _) = harness.expectSetRegion();
@@ -108,10 +108,7 @@ void main() {
     test('pads each side by a fraction of the span', () async {
       final harness = buildHarness();
       await harness.controller.fitCoordinates(
-        [
-          CLLocationCoordinate2D(latitude: 10, longitude: 20),
-          CLLocationCoordinate2D(latitude: 30, longitude: 40),
-        ],
+        [.new(latitude: 10, longitude: 20), .new(latitude: 30, longitude: 40)],
         animated: false,
         padding: 0.1,
       );
@@ -125,7 +122,7 @@ void main() {
     test('frames a single coordinate at the minimum span', () async {
       final harness = buildHarness();
       await harness.controller.fitCoordinates([
-        CLLocationCoordinate2D(latitude: 10, longitude: 20),
+        .new(latitude: 10, longitude: 20),
       ], animated: false);
       final (region, _) = harness.expectSetRegion();
       check(region.span.latitudeDelta).equals(0.005);

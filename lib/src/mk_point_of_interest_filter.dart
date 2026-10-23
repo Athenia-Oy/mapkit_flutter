@@ -39,7 +39,7 @@ final class IncludingAllPointsOfInterest extends MKPointOfInterestFilter {
 
   @override
   PlatformPointOfInterestFilter toPlatform() =>
-      PlatformPointOfInterestFilter(mode: .all, categories: const []);
+      .new(mode: .all, categories: const []);
 
   @override
   bool operator ==(Object other) => other is IncludingAllPointsOfInterest;
@@ -58,7 +58,7 @@ final class ExcludingAllPointsOfInterest extends MKPointOfInterestFilter {
 
   @override
   PlatformPointOfInterestFilter toPlatform() =>
-      PlatformPointOfInterestFilter(mode: .none, categories: const []);
+      .new(mode: .none, categories: const []);
 
   @override
   bool operator ==(Object other) => other is ExcludingAllPointsOfInterest;
@@ -80,7 +80,7 @@ final class const IncludingPointsOfInterest(
 
   @override
   PlatformPointOfInterestFilter toPlatform() =>
-      PlatformPointOfInterestFilter(mode: .including, categories: categories);
+      .new(mode: .including, categories: categories);
 
   @override
   bool operator ==(Object other) =>
@@ -104,7 +104,7 @@ final class const ExcludingPointsOfInterest(
 
   @override
   PlatformPointOfInterestFilter toPlatform() =>
-      PlatformPointOfInterestFilter(mode: .excluding, categories: categories);
+      .new(mode: .excluding, categories: categories);
 
   @override
   bool operator ==(Object other) =>

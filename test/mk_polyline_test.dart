@@ -1,5 +1,3 @@
-import 'dart:ui' show Color;
-
 import 'package:checks/checks.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mapkit_flutter/mapkit_flutter.dart';
@@ -10,9 +8,9 @@ void main() {
   group('MKPolyline wire mapping', () {
     test('serializes renderer vocabulary', () {
       final platform = MKPolyline(
-        id: const MKPolylineId('route'),
+        id: const .new('route'),
         coordinates: [applePark, infiniteLoop],
-        strokeColor: const Color(0xFF0000FF),
+        strokeColor: const .new(0xFF0000FF),
         lineWidth: 4,
         lineCap: .butt,
         lineJoin: .miter,
@@ -46,9 +44,9 @@ void main() {
 
     test('gradient colors serialize as ARGB32 when present', () {
       final platform = MKPolyline(
-        id: const MKPolylineId('g'),
+        id: const .new('g'),
         coordinates: [applePark, infiniteLoop],
-        gradientColors: const [Color(0xFFFF0000), Color(0xFF00FF00)],
+        gradientColors: const [.new(0xFFFF0000), .new(0xFF00FF00)],
       ).toPlatform();
       check(platform.gradientColorsArgb)
           .isNotNull()
@@ -58,16 +56,16 @@ void main() {
     test('rejects a single gradient color', () {
       check(
         () => MKPolyline(
-          id: const MKPolylineId('one'),
+          id: const .new('one'),
           coordinates: [applePark, infiniteLoop],
-          gradientColors: const [Color(0xFFFF0000)],
+          gradientColors: const [.new(0xFFFF0000)],
         ),
       ).throws<ArgumentError>();
       check(
         () => MKPolyline.geodesic(
-          id: const MKPolylineId('one'),
+          id: const .new('one'),
           coordinates: [applePark, infiniteLoop],
-          gradientColors: const [Color(0xFFFF0000)],
+          gradientColors: const [.new(0xFFFF0000)],
         ),
       ).throws<ArgumentError>();
     });
@@ -76,14 +74,14 @@ void main() {
       for (final bad in [-1.0, double.nan, double.infinity]) {
         check(
           () => MKPolyline(
-            id: const MKPolylineId('bad'),
+            id: const .new('bad'),
             coordinates: [applePark, infiniteLoop],
             lineWidth: bad,
           ),
         ).throws<ArgumentError>();
         check(
           () => MKPolyline.geodesic(
-            id: const MKPolylineId('bad'),
+            id: const .new('bad'),
             coordinates: [applePark, infiniteLoop],
             lineWidth: bad,
           ),
@@ -104,7 +102,7 @@ void main() {
         for (final create in [MKPolyline.new, MKPolyline.geodesic]) {
           check(
                 () => create(
-                  id: const MKPolylineId('dash'),
+                  id: const .new('dash'),
                   coordinates: [applePark, infiniteLoop],
                   lineDashPattern: bad,
                 ),
@@ -131,7 +129,7 @@ void main() {
   group('MKPolyline.geodesic', () {
     test('flags the wire payload without mutating coordinates', () {
       final platform = MKPolyline.geodesic(
-        id: const MKPolylineId('arc'),
+        id: const .new('arc'),
         coordinates: [applePark, infiniteLoop],
       ).toPlatform();
       check(platform.isGeodesic).isTrue();
@@ -140,7 +138,7 @@ void main() {
 
     test('copyWith preserves geodesic-ness', () {
       final arc = MKPolyline.geodesic(
-        id: const MKPolylineId('arc'),
+        id: const .new('arc'),
         coordinates: [applePark, infiniteLoop],
       );
       check(arc.copyWith(lineWidth: 2).isGeodesic).isTrue();
@@ -150,7 +148,7 @@ void main() {
     test('straight and geodesic lines compare unequal', () {
       final straight = polyline('p');
       final arc = MKPolyline.geodesic(
-        id: const MKPolylineId('p'),
+        id: const .new('p'),
         coordinates: [applePark, infiniteLoop],
       );
       check(straight == arc).isFalse();
@@ -161,13 +159,13 @@ void main() {
     test('compares coordinates and dash pattern by content', () {
       check(
         MKPolyline(
-          id: const MKPolylineId('p'),
+          id: const .new('p'),
           coordinates: [applePark],
           lineDashPattern: const [1, 2],
         ),
       ).equals(
-        MKPolyline(
-          id: const MKPolylineId('p'),
+        .new(
+          id: const .new('p'),
           coordinates: [applePark],
           lineDashPattern: const [1, 2],
         ),

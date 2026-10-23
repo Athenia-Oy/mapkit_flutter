@@ -12,7 +12,7 @@ void main() {
       'MKPointAnnotation.copyWith(clusteringIdentifier: null) un-clusters',
       () {
         final a = MKPointAnnotation(
-          id: const MKAnnotationId('a'),
+          id: const .new('a'),
           coordinate: here,
           title: 'Title',
           clusteringIdentifier: 'shops',
@@ -30,7 +30,7 @@ void main() {
       'MKPolyline.copyWith(lineDashPattern: null) restores a solid stroke',
       () {
         final dashed = MKPolyline(
-          id: const MKPolylineId('p'),
+          id: const .new('p'),
           coordinates: [here, here],
           lineDashPattern: const [6, 3],
         );

@@ -16,7 +16,7 @@ void main() {
   var nextViewId = 0;
 
   setUp(() {
-    host = FakeHostApi();
+    host = .new();
     nextViewId++;
   });
 
@@ -31,11 +31,7 @@ void main() {
   }
 
   MKMapViewControllerImpl controllerFactory(MKMapViewEventSink sink) =>
-      createdController = MKMapViewControllerImpl(
-        viewId: nextViewId,
-        sink: sink,
-        hostApi: host,
-      );
+      createdController = .new(viewId: nextViewId, sink: sink, hostApi: host);
 
   Widget map({
     Set<MKPointAnnotation> annotations = const {},
@@ -192,21 +188,21 @@ void main() {
     testWidgets('an icon-only restyle routes to toChange with the new tint', (
       tester,
     ) async {
-      MKPointAnnotation marker(Color tint) => MKPointAnnotation(
-        id: const MKAnnotationId('a'),
+      MKPointAnnotation marker(Color tint) => .new(
+        id: const .new('a'),
         coordinate: applePark,
         icon: .marker(markerTintColor: tint),
       );
 
       await tester.pumpWidget(
-        map(annotations: {marker(const Color(0xFF3F51B5))}),
+        map(annotations: {marker(const .new(0xFF3F51B5))}),
       );
       await tester.pump();
 
       // Same id and coordinate; only the marker tint changes — the in-place
       // update path the 0.2.2 marker-restyle fix depends on.
       await tester.pumpWidget(
-        map(annotations: {marker(const Color(0xFFFF5722))}),
+        map(annotations: {marker(const .new(0xFFFF5722))}),
       );
       await tester.pump();
 
@@ -253,7 +249,7 @@ void main() {
         map(
           isZoomEnabled: false,
           showsUserLocation: true,
-          cameraZoomRange: MKCameraZoomRange(minCenterCoordinateDistance: 500),
+          cameraZoomRange: .new(minCenterCoordinateDistance: 500),
         ),
       );
       await tester.pump();
@@ -316,9 +312,8 @@ void main() {
       requireCreated().eventHandler
         ..onMapTap(platformCoord(1, 2))
         ..onMapLongPress(platformCoord(3, 4));
-      check(tapped).equals(CLLocationCoordinate2D(latitude: 1, longitude: 2));
-      check(longPressed)
-          .equals(CLLocationCoordinate2D(latitude: 3, longitude: 4));
+      check(tapped).equals(.new(latitude: 1, longitude: 2));
+      check(longPressed).equals(.new(latitude: 3, longitude: 4));
     });
 
     testWidgets('camera lifecycle events reach the widget callbacks', (
@@ -344,10 +339,7 @@ void main() {
         ..onCameraIdle();
       check(events).deepEquals(['started', 'move', 'idle']);
       check(movedCamera).equals(
-        MKMapCamera(
-          centerCoordinate: CLLocationCoordinate2D(latitude: 5, longitude: 6),
-          distance: 700,
-        ),
+        .new(centerCoordinate: .new(latitude: 5, longitude: 6), distance: 700),
       );
     });
 
@@ -356,7 +348,7 @@ void main() {
     ) async {
       var selectCount = 0;
       final selectable = MKPointAnnotation(
-        id: const MKAnnotationId('a'),
+        id: const .new('a'),
         coordinate: applePark,
         onSelect: () => selectCount++,
       );
@@ -373,8 +365,8 @@ void main() {
       tester,
     ) async {
       var fired = '';
-      MKPointAnnotation tappable(String tag) => MKPointAnnotation(
-        id: const MKAnnotationId('a'),
+      MKPointAnnotation tappable(String tag) => .new(
+        id: const .new('a'),
         coordinate: applePark,
         onSelect: () => fired = tag,
       );
@@ -399,8 +391,8 @@ void main() {
       'callout tap and drag callbacks fire the latest closures after a rebuild',
       (tester) async {
         final events = <String>[];
-        MKPointAnnotation interactive(String tag) => MKPointAnnotation(
-          id: const MKAnnotationId('a'),
+        MKPointAnnotation interactive(String tag) => .new(
+          id: const .new('a'),
           coordinate: applePark,
           calloutConsumesTapEvents: true,
           onCalloutTap: () => events.add('callout-$tag'),
@@ -483,8 +475,8 @@ void main() {
       tester,
     ) async {
       final events = <String>[];
-      MKPointAnnotation selectable(String tag) => MKPointAnnotation(
-        id: const MKAnnotationId('a'),
+      MKPointAnnotation selectable(String tag) => .new(
+        id: const .new('a'),
         coordinate: applePark,
         onSelect: () => events.add('select-$tag'),
         onDeselect: () => events.add('deselect-$tag'),
@@ -527,7 +519,7 @@ void main() {
       await tester.pump();
 
       requireCreated().eventHandler.onMapFeatureSelected(
-        PlatformMapFeature(
+        .new(
           featureType: .territory,
           coordinate: platformCoord(1, 2),
           title: 'Cupertino',
@@ -535,9 +527,9 @@ void main() {
         ),
       );
       check(selected).equals(
-        MKMapFeature(
+        .new(
           featureType: .territory,
-          coordinate: CLLocationCoordinate2D(latitude: 1, longitude: 2),
+          coordinate: .new(latitude: 1, longitude: 2),
           title: 'Cupertino',
           pointOfInterestCategory: .evCharger,
         ),
@@ -547,31 +539,31 @@ void main() {
 
   group('iOS-only settings on macOS', () {
     final cases = <String, MKMapView Function(MKMapViewEventSinkFactory)>{
-      'followWithHeading': (f) => MKMapView(
+      'followWithHeading': (f) => .new(
         initialCamera: sampleCamera,
         userTrackingMode: .followWithHeading,
         debugControllerFactory: f,
       ),
-      'selectableMapFeatures': (f) => MKMapView(
+      'selectableMapFeatures': (f) => .new(
         initialCamera: sampleCamera,
         selectableMapFeatures: const {.pointsOfInterest},
         debugControllerFactory: f,
       ),
-      'onMapFeatureSelected': (f) => MKMapView(
+      'onMapFeatureSelected': (f) => .new(
         initialCamera: sampleCamera,
         onMapFeatureSelected: (_) {},
         debugControllerFactory: f,
       ),
-      'insetsLayoutMarginsFromSafeArea': (f) => MKMapView(
+      'insetsLayoutMarginsFromSafeArea': (f) => .new(
         initialCamera: sampleCamera,
         insetsLayoutMarginsFromSafeArea: false,
         debugControllerFactory: f,
       ),
-      'calloutConsumesTapEvents': (f) => MKMapView(
+      'calloutConsumesTapEvents': (f) => .new(
         initialCamera: sampleCamera,
         annotations: {
-          MKPointAnnotation(
-            id: const MKAnnotationId('a'),
+          .new(
+            id: const .new('a'),
             coordinate: applePark,
             calloutConsumesTapEvents: true,
           ),

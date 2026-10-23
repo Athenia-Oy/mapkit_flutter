@@ -66,7 +66,7 @@ final class MKTileOverlay({
 
   /// Converts this tile overlay to its Pigeon wire representation.
   @internal
-  PlatformTileOverlay toPlatform() => PlatformTileOverlay(
+  PlatformTileOverlay toPlatform() => .new(
     id: id.value,
     urlTemplate: urlTemplate,
     minimumZ: minimumZ,

@@ -29,10 +29,10 @@ final class MKPolygon({
   final List<List<CLLocationCoordinate2D>> interiorPolygons = const [],
 
   /// Interior fill color (`MKPolygonRenderer.fillColor`).
-  final Color fillColor = const Color(0x00000000),
+  final Color fillColor = const .new(0x00000000),
 
   /// Outline stroke color (`MKPolygonRenderer.strokeColor`).
-  final Color strokeColor = const Color(0xFF000000),
+  final Color strokeColor = const .new(0xFF000000),
 
   /// Stroke width in points (`lineWidth`).
   final double lineWidth = 10,
@@ -78,7 +78,7 @@ final class MKPolygon({
     bool? consumeTapEvents,
     MKOverlayLevel? level,
     VoidCallback? onTap = keepCallback,
-  }) => MKPolygon(
+  }) => .new(
     id: id,
     coordinates: coordinates ?? this.coordinates,
     interiorPolygons: interiorPolygons ?? this.interiorPolygons,
@@ -94,7 +94,7 @@ final class MKPolygon({
 
   /// Converts this polygon to its Pigeon wire representation.
   @internal
-  PlatformPolygon toPlatform() => PlatformPolygon(
+  PlatformPolygon toPlatform() => .new(
     id: id.value,
     coordinates: coordinates.map((c) => c.toPlatform()).toList(),
     interiorPolygons: interiorPolygons

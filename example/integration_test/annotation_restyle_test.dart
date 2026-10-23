@@ -26,7 +26,7 @@ void main() {
 
     Widget mapWith(Set<MKPointAnnotation> annotations) => MaterialApp(
       home: MKMapView(
-        initialCamera: MKMapCamera(centerCoordinate: applePark, distance: 1500),
+        initialCamera: .new(centerCoordinate: applePark, distance: 1500),
         annotations: annotations,
         onMapCreated: (c) => controller ??= c,
       ),
@@ -34,11 +34,11 @@ void main() {
 
     Future<void> pump(Set<MKPointAnnotation> annotations) async {
       await tester.pumpWidget(mapWith(annotations));
-      await tester.pump(const Duration(milliseconds: 300));
+      await tester.pump(const .new(milliseconds: 300));
     }
 
     MKPointAnnotation marker({Color? tint, String? glyph, String? subtitle}) =>
-        MKPointAnnotation(
+        .new(
           id: id,
           coordinate: applePark,
           icon: .marker(markerTintColor: tint, systemImage: glyph),
@@ -48,9 +48,9 @@ void main() {
 
     // Initial marker — wait for the platform view to reach onMapCreated.
     await pump({marker(tint: Colors.indigo, glyph: 'star.fill')});
-    final deadline = DateTime.now().add(const Duration(seconds: 15));
+    final deadline = DateTime.now().add(const .new(seconds: 15));
     while (controller == null && DateTime.now().isBefore(deadline)) {
-      await tester.pump(const Duration(milliseconds: 100));
+      await tester.pump(const .new(milliseconds: 100));
     }
     final ctrl = controller;
     if (ctrl == null) {
@@ -66,12 +66,7 @@ void main() {
     // Icon-type swap: marker → custom image → marker.
     final png = await renderCircleMarkerPng(Colors.purple);
     await pump({
-      MKPointAnnotation(
-        id: id,
-        coordinate: applePark,
-        icon: .image(png),
-        title: 'Restyle',
-      ),
+      .new(id: id, coordinate: applePark, icon: .image(png), title: 'Restyle'),
     });
     await pump({marker(tint: Colors.teal)});
 
@@ -86,13 +81,13 @@ void main() {
     check(await ctrl.selectAnnotation(id)).isTrue();
     var shown = false;
     while (!shown && DateTime.now().isBefore(deadline)) {
-      await tester.pump(const Duration(milliseconds: 150));
+      await tester.pump(const .new(milliseconds: 150));
       shown = await ctrl.isAnnotationSelected(id);
     }
     check(shown, because: 'selection never took on the reused pin').isTrue();
 
     check(await ctrl.deselectAnnotation(id)).isTrue();
-    await tester.pump(const Duration(milliseconds: 300));
+    await tester.pump(const .new(milliseconds: 300));
     check(await ctrl.isAnnotationSelected(id)).isFalse();
 
     // The channel is still responsive after every restyle.

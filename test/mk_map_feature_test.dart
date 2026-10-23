@@ -7,7 +7,7 @@ void main() {
   test('MKMapFeature.fromPlatform maps fields and supports equality', () {
     final wire = PlatformMapFeature(
       featureType: .pointOfInterest,
-      coordinate: PlatformCoordinate(latitude: 37.3346, longitude: -122.009),
+      coordinate: .new(latitude: 37.3346, longitude: -122.009),
       title: 'Apple Park',
       pointOfInterestCategory: .park,
     );
@@ -15,12 +15,9 @@ void main() {
     final feature = MKMapFeature.fromPlatform(wire);
 
     check(feature).equals(
-      MKMapFeature(
+      .new(
         featureType: .pointOfInterest,
-        coordinate: CLLocationCoordinate2D(
-          latitude: 37.3346,
-          longitude: -122.009,
-        ),
+        coordinate: .new(latitude: 37.3346, longitude: -122.009),
         title: 'Apple Park',
         pointOfInterestCategory: .park,
       ),
@@ -28,22 +25,16 @@ void main() {
     check(feature.hashCode).equals(
       MKMapFeature(
         featureType: .pointOfInterest,
-        coordinate: CLLocationCoordinate2D(
-          latitude: 37.3346,
-          longitude: -122.009,
-        ),
+        coordinate: .new(latitude: 37.3346, longitude: -122.009),
         title: 'Apple Park',
         pointOfInterestCategory: .park,
       ).hashCode,
     );
     check(
       feature ==
-          MKMapFeature(
+          .new(
             featureType: .territory,
-            coordinate: CLLocationCoordinate2D(
-              latitude: 37.3346,
-              longitude: -122.009,
-            ),
+            coordinate: .new(latitude: 37.3346, longitude: -122.009),
           ),
     ).isFalse();
     check(feature.toString()).equals(

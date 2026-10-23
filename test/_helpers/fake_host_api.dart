@@ -12,15 +12,15 @@ final class FakeHostApi extends MapKitHostApi {
   /// Names of all recorded calls, in order.
   List<String> get callNames => [for (final c in calls) c.$1];
 
-  PlatformMapCamera? camera = PlatformMapCamera(
-    centerCoordinate: PlatformCoordinate(latitude: 0, longitude: 0),
+  PlatformMapCamera? camera = .new(
+    centerCoordinate: .new(latitude: 0, longitude: 0),
     distance: 1000,
     heading: 0,
     pitch: 0,
   );
-  PlatformCoordinateRegion? region = PlatformCoordinateRegion(
-    center: PlatformCoordinate(latitude: 0, longitude: 0),
-    span: PlatformCoordinateSpan(latitudeDelta: 0, longitudeDelta: 0),
+  PlatformCoordinateRegion? region = .new(
+    center: .new(latitude: 0, longitude: 0),
+    span: .new(latitudeDelta: 0, longitudeDelta: 0),
   );
   PlatformPoint? point;
   PlatformCoordinate? coordinate;
@@ -139,7 +139,7 @@ final class FakeHostApi extends MapKitHostApi {
   @override
   Future<Uint8List> takeSnapshot(PlatformSnapshotOptions options) async {
     _record('takeSnapshot', options);
-    return Uint8List(0);
+    return .new(0);
   }
 
   @override

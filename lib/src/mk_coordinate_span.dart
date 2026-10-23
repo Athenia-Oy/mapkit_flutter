@@ -23,17 +23,13 @@ final class MKCoordinateSpan({
 
   /// Constructs a coordinate span from its Pigeon wire representation.
   @internal
-  factory fromPlatform(PlatformCoordinateSpan p) => MKCoordinateSpan(
-    latitudeDelta: p.latitudeDelta,
-    longitudeDelta: p.longitudeDelta,
-  );
+  factory fromPlatform(PlatformCoordinateSpan p) =>
+      .new(latitudeDelta: p.latitudeDelta, longitudeDelta: p.longitudeDelta);
 
   /// Converts this coordinate span to its Pigeon wire representation.
   @internal
-  PlatformCoordinateSpan toPlatform() => PlatformCoordinateSpan(
-    latitudeDelta: latitudeDelta,
-    longitudeDelta: longitudeDelta,
-  );
+  PlatformCoordinateSpan toPlatform() =>
+      .new(latitudeDelta: latitudeDelta, longitudeDelta: longitudeDelta);
 
   @override
   bool operator ==(Object other) =>

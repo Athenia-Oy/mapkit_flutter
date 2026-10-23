@@ -43,7 +43,7 @@ final class MKPointAnnotation({
   /// on iOS, the equivalent `centerOffset` on macOS): `(0.5, 1)` pins the
   /// bottom-center to [coordinate]. Applies to [MKAnnotationIcon.image]
   /// icons; system markers anchor themselves.
-  final Offset anchorPoint = const Offset(0.5, 1),
+  final Offset anchorPoint = const .new(0.5, 1),
 
   /// Whether the user can drag the annotation
   /// (`MKAnnotationView.isDraggable`).
@@ -119,7 +119,7 @@ final class MKPointAnnotation({
     ValueChanged<CLLocationCoordinate2D>? onDragEnd = keepCoordinateCallback,
     VoidCallback? onSelect = keepCallback,
     VoidCallback? onDeselect = keepCallback,
-  }) => MKPointAnnotation(
+  }) => .new(
     id: id,
     coordinate: coordinate ?? this.coordinate,
     icon: icon ?? this.icon,
@@ -152,7 +152,7 @@ final class MKPointAnnotation({
 
   /// Converts this annotation to its Pigeon wire representation.
   @internal
-  PlatformAnnotation toPlatform() => PlatformAnnotation(
+  PlatformAnnotation toPlatform() => .new(
     id: id.value,
     coordinate: coordinate.toPlatform(),
     icon: icon.toPlatform(),

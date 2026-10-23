@@ -281,7 +281,7 @@ final class _MKMapViewState extends State<MKMapView>
   }
 
   void _onPlatformViewCreated(int id) =>
-      _wireController(MKMapViewControllerImpl(viewId: id, sink: this));
+      _wireController(.new(viewId: id, sink: this));
 
   /// Push the full initial state over the type-safe channel now that the
   /// platform view (and its host API handler) exists.
@@ -309,7 +309,7 @@ final class _MKMapViewState extends State<MKMapView>
     ) = widget.preferredConfiguration
         ._platformProperties();
 
-    return PlatformMapConfiguration(
+    return .new(
       kind: kind,
       emphasisStyle: emphasisStyle,
       elevationStyle: widget.preferredConfiguration.elevationStyle,

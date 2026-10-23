@@ -16,10 +16,9 @@ void main() {
     test('equality covers every field', () {
       const traffic = MKStandardMapConfiguration(showsTraffic: true);
       check(traffic).equals(traffic);
-      check(traffic == const MKStandardMapConfiguration()).isFalse();
+      check(traffic == const .new()).isFalse();
       check(
-        const MKStandardMapConfiguration(emphasisStyle: .muted) ==
-            const MKStandardMapConfiguration(),
+        const MKStandardMapConfiguration(emphasisStyle: .muted) == const .new(),
       ).isFalse();
     });
 
@@ -37,13 +36,9 @@ void main() {
     test('equality covers traffic and POI filter', () {
       check(
         const MKHybridMapConfiguration(pointOfInterestFilter: .excludingAll),
-      ).equals(
-        const MKHybridMapConfiguration(pointOfInterestFilter: .excludingAll),
-      );
-      check(
-        const MKHybridMapConfiguration(showsTraffic: true) ==
-            const MKHybridMapConfiguration(),
-      ).isFalse();
+      ).equals(const .new(pointOfInterestFilter: .excludingAll));
+      check(const MKHybridMapConfiguration(showsTraffic: true) == const .new())
+          .isFalse();
     });
 
     test('toString includes pointOfInterestFilter', () {
@@ -60,7 +55,7 @@ void main() {
       check(realistic).equals(realistic);
       check(
         const MKImageryMapConfiguration() ==
-            const MKImageryMapConfiguration(elevationStyle: .realistic),
+            const .new(elevationStyle: .realistic),
       ).isFalse();
     });
 

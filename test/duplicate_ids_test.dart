@@ -2,21 +2,20 @@ import 'package:checks/checks.dart';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mapkit_flutter/mapkit_flutter.dart';
-import 'package:mapkit_flutter/src/mk_map_view_controller.dart';
 
 import '_helpers/fake_host_api.dart';
 import '_helpers/fixtures.dart';
 
 void main() {
   final red = MKPolyline(
-    id: const MKPolylineId('route'),
+    id: const .new('route'),
     coordinates: [applePark, infiniteLoop],
-    strokeColor: const Color(0xFFFF0000),
+    strokeColor: const .new(0xFFFF0000),
   );
   final blue = MKPolyline(
-    id: const MKPolylineId('route'),
+    id: const .new('route'),
     coordinates: [applePark, infiniteLoop],
-    strokeColor: const Color(0xFF0000FF),
+    strokeColor: const .new(0xFF0000FF),
   );
 
   testWidgets('a rebuild introducing a duplicate id throws', (tester) async {
@@ -25,7 +24,7 @@ void main() {
       initialCamera: sampleCamera,
       polylines: polylines,
       debugControllerFactory: (sink) =>
-          MKMapViewControllerImpl(viewId: 901, sink: sink, hostApi: host),
+          .new(viewId: 901, sink: sink, hostApi: host),
     );
     await tester.pumpWidget(map({red}));
     await tester.pump();
@@ -40,7 +39,7 @@ void main() {
         initialCamera: sampleCamera,
         polylines: {red, blue},
         debugControllerFactory: (sink) =>
-            MKMapViewControllerImpl(viewId: 900, sink: sink, hostApi: host),
+            .new(viewId: 900, sink: sink, hostApi: host),
       ),
     );
     check(tester.takeException())

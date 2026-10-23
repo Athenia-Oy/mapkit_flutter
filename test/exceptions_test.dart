@@ -1,5 +1,4 @@
 import 'package:checks/checks.dart';
-import 'package:flutter/services.dart' show PlatformException;
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mapkit_flutter/mapkit_flutter.dart';
 
@@ -7,7 +6,7 @@ void main() {
   group('MapKitException.fromPlatform', () {
     test('wraps any code with its diagnostics', () {
       final e = MapKitException.fromPlatform(
-        PlatformException(code: 'boom', message: 'kaboom', details: 42),
+        .new(code: 'boom', message: 'kaboom', details: 42),
       );
       check(e).isA<MapKitPlatformException>();
       final platform = e as MapKitPlatformException;
@@ -18,7 +17,7 @@ void main() {
     });
 
     test('falls back to a generic message when the platform sends none', () {
-      final e = MapKitException.fromPlatform(PlatformException(code: 'x'));
+      final e = MapKitException.fromPlatform(.new(code: 'x'));
       check(e.message).equals('Platform error');
     });
   });

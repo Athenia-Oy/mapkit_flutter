@@ -20,10 +20,8 @@ final class const MKCoordinateRegion({
 
   /// Constructs a coordinate region from its Pigeon wire representation.
   @internal
-  factory fromPlatform(PlatformCoordinateRegion p) => MKCoordinateRegion(
-    center: .fromPlatform(p.center),
-    span: .fromPlatform(p.span),
-  );
+  factory fromPlatform(PlatformCoordinateRegion p) =>
+      .new(center: .fromPlatform(p.center), span: .fromPlatform(p.span));
 
   /// Smallest region that contains all given [coordinates].
   /// Returns null when [coordinates] is empty.
@@ -44,12 +42,12 @@ final class const MKCoordinateRegion({
       if (c.longitude < minLng) minLng = c.longitude;
       if (c.longitude > maxLng) maxLng = c.longitude;
     }
-    return MKCoordinateRegion(
-      center: CLLocationCoordinate2D(
+    return .new(
+      center: .new(
         latitude: (minLat + maxLat) / 2,
         longitude: (minLng + maxLng) / 2,
       ),
-      span: MKCoordinateSpan(
+      span: .new(
         latitudeDelta: maxLat - minLat,
         longitudeDelta: maxLng - minLng,
       ),
@@ -69,10 +67,8 @@ final class const MKCoordinateRegion({
 
   /// Converts this coordinate region to its Pigeon wire representation.
   @internal
-  PlatformCoordinateRegion toPlatform() => PlatformCoordinateRegion(
-    center: center.toPlatform(),
-    span: span.toPlatform(),
-  );
+  PlatformCoordinateRegion toPlatform() =>
+      .new(center: center.toPlatform(), span: span.toPlatform());
 
   @override
   bool operator ==(Object other) =>
