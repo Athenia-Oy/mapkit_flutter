@@ -1,7 +1,7 @@
 ---
 name: mapkit-flutter-scaffold
-description: Scaffold or extend an Apple Maps page with package:mapkit_flutter. iOS and macOS.
-disable-model-invocation: true
+description: 'Scaffold or extend an Apple Maps screen in Flutter on iOS and macOS via `package:mapkit_flutter/mapkit_flutter.dart` — MKMapView widget, pins and custom markers, clustering, polylines, polygons, circles, tile overlays, camera and region control, snapshots, Look Around, mocking MKMapViewController. Use for any map in an Apple-only Flutter app or its MapKit code. Skip for Android or web maps (`google_maps_flutter`, `flutter_map`), Mapbox (`mapbox_maps_flutter`).'
+license: MIT
 ---
 
 # mapkit-flutter-scaffold
