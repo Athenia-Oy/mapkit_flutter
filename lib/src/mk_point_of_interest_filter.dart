@@ -11,11 +11,11 @@ sealed class MKPointOfInterestFilter {
   const new();
 
   /// Shows only the listed [categories].
-  const factory including(List<MKPointOfInterestCategory> categories) =
+  factory including(List<MKPointOfInterestCategory> categories) =
       IncludingPointsOfInterest;
 
   /// Shows every category except the listed [categories].
-  const factory excluding(List<MKPointOfInterestCategory> categories) =
+  factory excluding(List<MKPointOfInterestCategory> categories) =
       ExcludingPointsOfInterest;
 
   /// Shows every point-of-interest category.
@@ -71,12 +71,13 @@ final class ExcludingAllPointsOfInterest extends MKPointOfInterestFilter {
 }
 
 /// Shows only the listed [categories].
-final class const IncludingPointsOfInterest(
-  /// Categories included by this filter.
-  final List<MKPointOfInterestCategory> categories,
-) extends MKPointOfInterestFilter {
+final class IncludingPointsOfInterest extends MKPointOfInterestFilter {
   /// Creates a filter that includes only [categories].
-  this;
+  new(List<MKPointOfInterestCategory> categories)
+    : categories = .unmodifiable(categories);
+
+  /// Categories included by this filter.
+  final List<MKPointOfInterestCategory> categories;
 
   @override
   PlatformPointOfInterestFilter toPlatform() =>
@@ -95,12 +96,13 @@ final class const IncludingPointsOfInterest(
 }
 
 /// Shows every category except the listed [categories].
-final class const ExcludingPointsOfInterest(
-  /// Categories excluded by this filter.
-  final List<MKPointOfInterestCategory> categories,
-) extends MKPointOfInterestFilter {
+final class ExcludingPointsOfInterest extends MKPointOfInterestFilter {
   /// Creates a filter that excludes [categories].
-  this;
+  new(List<MKPointOfInterestCategory> categories)
+    : categories = .unmodifiable(categories);
+
+  /// Categories excluded by this filter.
+  final List<MKPointOfInterestCategory> categories;
 
   @override
   PlatformPointOfInterestFilter toPlatform() =>

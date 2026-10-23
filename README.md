@@ -149,15 +149,19 @@ Value types validate in every build mode and throw an `ArgumentError` for input
 MapKit can't represent — a latitude outside `[-90, 90]` (swapped arguments), a
 non-finite number, a negative `lineWidth`, `alpha` outside `[0, 1]`, a zoom
 range whose minimum exceeds its maximum. That is why those types have no `const`
-constructor; ids, icons, regions, map configurations and snapshot options do.
-Longitude wraps into `[-180, 180)` like MapKit. `Coordinate` is an exported
-alias for `CLLocationCoordinate2D`; if another package also exports a
+constructor; ids, marker icons, regions, map configurations and snapshot options
+do. Polylines, polygons and point-of-interest filters keep their own
+unmodifiable copy of the lists you pass, so changing a list later never changes
+the value. Longitude wraps into `[-180, 180)` like MapKit. `Coordinate` is an
+exported alias for `CLLocationCoordinate2D`; if another package also exports a
 `Coordinate`, `hide` it on import.
 
 Content is declarative: on every rebuild, `MKMapView` diffs each set by id. A
 new id is added, a changed object with the same id is updated, and an id that
-left the set is removed from the map. Ids must be unique per kind; two
-annotations (or two polylines…) sharing an id throw when `MKMapView` builds.
+left the set is removed from the map. The diff runs against what the map last
+received, so you can build a new set on every rebuild or change one in place and
+call `setState`. Ids must be unique per kind; two annotations (or two
+polylines…) sharing an id throw when `MKMapView` builds.
 
 Models override `==`, so they can't be used in `const {…}` set literals — build
 the set without `const`. `copyWith` clears a nullable field when you pass `null`
@@ -184,11 +188,11 @@ MKMapView campusMap({
 }) {
   return MKMapView(
     initialCamera: camera,
-    preferredConfiguration: const MKStandardMapConfiguration(
+    preferredConfiguration: MKStandardMapConfiguration(
       elevationStyle: MKMapElevationStyle.realistic,
       // `standard` is Apple's `.default`, a reserved word in Dart.
       emphasisStyle: MKMapEmphasisStyle.muted,
-      pointOfInterestFilter: MKPointOfInterestFilter.including([
+      pointOfInterestFilter: MKPointOfInterestFilter.including(const [
         MKPointOfInterestCategory.cafe,
         MKPointOfInterestCategory.park,
       ]),

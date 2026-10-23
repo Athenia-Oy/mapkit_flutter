@@ -1,3 +1,5 @@
+import 'dart:ui' show Color;
+
 import 'package:checks/checks.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mapkit_flutter/mapkit_flutter.dart';
@@ -173,6 +175,39 @@ void main() {
       final dashed = polyline('p').copyWith(lineDashPattern: const [1]);
       check(polyline('p') == dashed).isFalse();
     });
+  });
+
+  group('caller-owned lists', () {
+    for (final (name, make) in [
+      ('MKPolyline', MKPolyline.new),
+      ('MKPolyline.geodesic', MKPolyline.geodesic),
+    ]) {
+      test('$name snapshots its lists, so a later mutation is a new value', () {
+        final coordinates = [applePark, infiniteLoop];
+        final dashes = <double>[6, 3];
+        final colors = <Color>[const .new(0xFF000000), const .new(0xFFFFFFFF)];
+        MKPolyline build() => make(
+          id: const .new('p'),
+          coordinates: coordinates,
+          lineDashPattern: dashes,
+          gradientColors: colors,
+        );
+        final before = build();
+
+        coordinates.add(applePark);
+        dashes.add(1);
+        colors.add(const .new(0xFFFF0000));
+
+        check(before.coordinates).length.equals(2);
+        check(before.lineDashPattern).isNotNull().length.equals(2);
+        check(before.gradientColors).length.equals(2);
+        check(before == build()).isFalse();
+        check(() => before.coordinates.add(applePark))
+            .throws<UnsupportedError>();
+        check(() => before.lineDashPattern?.add(1)).throws<UnsupportedError>();
+        check(before.gradientColors.clear).throws<UnsupportedError>();
+      });
+    }
   });
 
   group('tap consumption', () {

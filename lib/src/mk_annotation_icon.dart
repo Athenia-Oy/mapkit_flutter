@@ -2,6 +2,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/painting.dart';
 import 'package:flutter/services.dart';
 
+import 'package:mapkit_flutter/src/_internal/validate.dart';
 import 'package:mapkit_flutter/src/messages.g.dart';
 
 /// What an annotation looks like, mirroring the `MKMarkerAnnotationView` /
@@ -38,13 +39,20 @@ final class MKAnnotationIcon {
   /// `imagePixelRatio` is the pixels-per-logical-point of [png] (pass the
   /// `pixelRatio` the widget was rendered with); defaults to the device pixel
   /// ratio, matching bytes rendered at native resolution.
-  const new image(Uint8List png, {this._imagePixelRatio})
+  ///
+  /// Throws [ArgumentError] for an `imagePixelRatio` that is not finite and
+  /// `> 0`.
+  new image(Uint8List png, {this._imagePixelRatio})
     : _type = .image,
       _markerTintColor = null,
       _glyphText = null,
       _glyphSystemImage = null,
       _glyphTintColor = null,
-      _imageBytes = png;
+      _imageBytes = png {
+    if (_imagePixelRatio case final ratio?) {
+      checkPositive(ratio, 'imagePixelRatio');
+    }
+  }
 
   /// Load an annotation image from the asset bundle into an
   /// [MKAnnotationIcon.image].

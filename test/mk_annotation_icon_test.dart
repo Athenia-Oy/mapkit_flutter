@@ -51,6 +51,15 @@ void main() {
       check(platform.imagePixelRatio).equals(2.5);
     });
 
+    test('rejects an imagePixelRatio that is not finite and > 0', () {
+      for (final bad in [0.0, -1.0, double.nan, double.infinity]) {
+        check(
+          because: 'imagePixelRatio $bad',
+          () => MKAnnotationIcon.image(.fromList([1]), imagePixelRatio: bad),
+        ).throws<ArgumentError>();
+      }
+    });
+
     test('imagePixelRatio defaults to the implicit view ratio', () {
       TestWidgetsFlutterBinding.ensureInitialized();
       final platform = MKAnnotationIcon.image(.fromList([1])).toPlatform();

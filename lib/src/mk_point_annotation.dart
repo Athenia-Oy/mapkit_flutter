@@ -87,11 +87,15 @@ final class MKPointAnnotation({
 }) {
   /// Creates a point annotation at [coordinate].
   ///
-  /// Throws [ArgumentError] when [alpha] is outside `[0, 1]`, or when
-  /// [onCalloutTap] is set without [calloutConsumesTapEvents] (it would never
-  /// fire).
+  /// Throws [ArgumentError] when [alpha] is outside `[0, 1]`, when
+  /// [anchorPoint] or [zPriority] is not finite, or when [onCalloutTap] is set
+  /// without [calloutConsumesTapEvents] (it would never fire).
   this {
     checkInRange(alpha, 0, 1, 'alpha');
+    if (!anchorPoint.isFinite) {
+      throw ArgumentError.value(anchorPoint, 'anchorPoint', 'must be finite');
+    }
+    checkFinite(zPriority, 'zPriority');
     if (onCalloutTap != null && !calloutConsumesTapEvents) {
       throw ArgumentError.value(
         onCalloutTap,

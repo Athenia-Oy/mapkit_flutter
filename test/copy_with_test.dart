@@ -127,16 +127,16 @@ void main() {
       consumeTapEvents: true,
       onTap: tap,
     );
-    const dash = [2.0, 4.0];
+
+    test('lineDashPattern: omitted keeps, null clears, a value sets', () {
+      check(full.copyWith().lineDashPattern).isNotNull().deepEquals([6, 3]);
+      check(full.copyWith(lineDashPattern: null).lineDashPattern).isNull();
+      check(full.copyWith(lineDashPattern: [2, 4]).lineDashPattern)
+          .isNotNull()
+          .deepEquals([2, 4]);
+    });
 
     for (final c in <_Case<MKPolyline>>[
-      (
-        name: 'lineDashPattern',
-        read: (p) => p.lineDashPattern,
-        clear: (p) => p.copyWith(lineDashPattern: null),
-        set: (p) => p.copyWith(lineDashPattern: dash),
-        next: dash,
-      ),
       (
         name: 'onTap',
         read: (p) => p.onTap,

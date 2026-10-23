@@ -1,5 +1,32 @@
 # Changelog
 
+## Unreleased
+
+### Breaking
+
+- **Polylines, polygons and point-of-interest filters keep unmodifiable copies
+  of the lists you pass.** Mutating a list after handing it over could hide the
+  change from the map diff and slip past validation. `MKPolyline`
+  (`coordinates`, `lineDashPattern`, `gradientColors`), `MKPolygon`
+  (`coordinates`, `interiorPolygons` and each ring) and
+  `MKPointOfInterestFilter.including` / `.excluding` (`categories`) now copy
+  them, and their getters return unmodifiable lists. The two filter constructors
+  lost `const`. Migration: drop `const` before
+  `MKPointOfInterestFilter.including(...)` / `.excluding(...)` and any map
+  configuration that holds one (`.including(const [...])` still works), and
+  build a new list instead of mutating one read from a value.
+
+### Fixed
+
+- `MKMapView` diffs annotations, overlays and `selectableMapFeatures` against
+  what it last sent to MapKit instead of the previous widget. Changing a `Set`
+  in place and calling `setState` used to update nothing; it now updates the
+  map.
+- `MKAnnotationIcon.image` throws an `ArgumentError` for an `imagePixelRatio`
+  that is not finite and `> 0`, and `MKPointAnnotation` throws one for a
+  non-finite `zPriority` or `anchorPoint`. These used to reach MapKit as NaN or
+  infinite sizes and offsets.
+
 ## 0.5.1 - 2026-10-16
 
 ### Fixed

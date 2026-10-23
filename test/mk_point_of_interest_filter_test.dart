@@ -17,7 +17,7 @@ void main() {
     });
 
     test('including carries its categories', () {
-      const filter = MKPointOfInterestFilter.including([.cafe, .museum]);
+      final filter = MKPointOfInterestFilter.including(const [.cafe, .museum]);
       final platform = filter.toPlatform();
       check(platform.mode).equals(.including);
       check(platform.categories).deepEquals([
@@ -27,7 +27,7 @@ void main() {
     });
 
     test('excluding carries its categories', () {
-      const filter = MKPointOfInterestFilter.excluding([.nightlife]);
+      final filter = MKPointOfInterestFilter.excluding(const [.nightlife]);
       final platform = filter.toPlatform();
       check(platform.mode).equals(.excluding);
       const expected = [MKPointOfInterestCategory.nightlife];
@@ -41,22 +41,47 @@ void main() {
     });
 
     test('an iOS 18 category round-trips through a filter', () {
-      const filter = MKPointOfInterestFilter.including([.golf]);
+      final filter = MKPointOfInterestFilter.including(const [.golf]);
       check(filter.toPlatform().categories)
           .deepEquals([MKPointOfInterestCategory.golf]);
     });
   });
 
+  group('caller-owned category lists', () {
+    for (final (name, make) in [
+      ('including', MKPointOfInterestFilter.including),
+      ('excluding', MKPointOfInterestFilter.excluding),
+    ]) {
+      test('$name snapshots its categories, so a later mutation is a new '
+          'value', () {
+        final categories = [MKPointOfInterestCategory.cafe];
+        final before = make(categories);
+        categories.add(.museum);
+        check(before == make(categories)).isFalse();
+        check(before.toPlatform().categories)
+            .deepEquals([MKPointOfInterestCategory.cafe]);
+      });
+    }
+
+    test('exposes unmodifiable categories', () {
+      final categories = [MKPointOfInterestCategory.cafe];
+      check(() => IncludingPointsOfInterest(categories).categories.add(.museum))
+          .throws<UnsupportedError>();
+      check(() => ExcludingPointsOfInterest(categories).categories.add(.museum))
+          .throws<UnsupportedError>();
+    });
+  });
+
   group('MKPointOfInterestFilter equality', () {
     test('same categories compare equal', () {
-      const cafe = MKPointOfInterestFilter.including([.cafe]);
+      final cafe = MKPointOfInterestFilter.including(const [.cafe]);
       check(cafe).equals(cafe);
     });
 
     test('including and excluding never compare equal', () {
       check(
-        const MKPointOfInterestFilter.including([.cafe]) ==
-            const .excluding([.cafe]),
+        MKPointOfInterestFilter.including(const [.cafe]) ==
+            .excluding(const [.cafe]),
       ).isFalse();
     });
 
@@ -65,11 +90,11 @@ void main() {
           .equals('MKPointOfInterestFilter.includingAll');
       check(MKPointOfInterestFilter.excludingAll.toString())
           .equals('MKPointOfInterestFilter.excludingAll');
-      check(const MKPointOfInterestFilter.including([.cafe]).toString()).equals(
+      check(MKPointOfInterestFilter.including(const [.cafe]).toString()).equals(
         'MKPointOfInterestFilter.including('
         '${const [MKPointOfInterestCategory.cafe]})',
       );
-      check(const MKPointOfInterestFilter.excluding([.nightlife]).toString())
+      check(MKPointOfInterestFilter.excluding(const [.nightlife]).toString())
           .equals(
             'MKPointOfInterestFilter.excluding('
             '${const [MKPointOfInterestCategory.nightlife]})',

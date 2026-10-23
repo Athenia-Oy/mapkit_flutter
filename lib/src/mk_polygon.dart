@@ -22,11 +22,8 @@ final class MKPolygon({
   /// Unique identifier used to diff this polygon across rebuilds.
   required final MKPolygonId id,
 
-  /// Outer ring vertices of the polygon.
-  required final List<CLLocationCoordinate2D> coordinates,
-
-  /// Rings cut out of the filled shape (`MKPolygon.interiorPolygons`).
-  final List<List<CLLocationCoordinate2D>> interiorPolygons = const [],
+  required List<CLLocationCoordinate2D> coordinates,
+  List<List<CLLocationCoordinate2D>> interiorPolygons = const [],
 
   /// Interior fill color (`MKPolygonRenderer.fillColor`).
   final Color fillColor = const .new(0x00000000),
@@ -65,6 +62,14 @@ final class MKPolygon({
     checkNonNegative(lineWidth, 'lineWidth');
     checkTapCallback(onTap, consumeTapEvents: consumeTapEvents);
   }
+
+  /// Outer ring vertices of the polygon.
+  final List<CLLocationCoordinate2D> coordinates = .unmodifiable(coordinates);
+
+  /// Rings cut out of the filled shape (`MKPolygon.interiorPolygons`).
+  final List<List<CLLocationCoordinate2D>> interiorPolygons = .unmodifiable(
+    interiorPolygons.map(List<CLLocationCoordinate2D>.unmodifiable),
+  );
 
   /// Returns a copy with the given fields replaced.
   MKPolygon copyWith({

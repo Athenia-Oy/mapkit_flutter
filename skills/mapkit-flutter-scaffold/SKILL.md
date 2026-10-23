@@ -20,8 +20,10 @@ setting) when used on macOS.
 ## Divergences from raw MapKit
 
 - `MKMapView` is a declarative StatefulWidget: content is
-  `Set<MKPointAnnotation>` / `Set<MKPolyline>` / … params, diffed on rebuild.
-  Same id + changed fields → update; removed from set → removed from map.
+  `Set<MKPointAnnotation>` / `Set<MKPolyline>` / … params, diffed on rebuild
+  against what the map last received (a new set per build and an in-place
+  mutation + `setState` both work). Same id + changed fields → update; removed
+  from set → removed from map.
 - No view/renderer objects: presentation props are merged onto the models —
   `MKPointAnnotation`'s `icon:`, `alpha:`, `isDraggable:`, `zPriority:`,
   `clusteringIdentifier:`; `MKPolyline`'s `strokeColor:`, `lineWidth:`,
@@ -31,9 +33,12 @@ setting) when used on macOS.
   throws `ArgumentError` when the map builds).
 - Value types validate in every build mode and throw `ArgumentError` (latitude
   outside `[-90, 90]` — no clamping, non-finite numbers, negative widths/radii,
-  alpha outside `[0, 1]`, zoom range min > max, a single gradient color), so
-  they have no `const` constructors. Longitude wraps into `[-180, 180)`.
-  `MKCameraZoomRange.unbounded` is the const default.
+  alpha outside `[0, 1]`, zoom range min > max, a single gradient color,
+  `imagePixelRatio` ≤ 0), so they have no `const` constructors. Longitude wraps
+  into `[-180, 180)`. `MKCameraZoomRange.unbounded` is the const default.
+  `MKPolyline`/`MKPolygon`/`MKPointOfInterestFilter.including`/`.excluding`
+  store unmodifiable copies of their lists, so the filters aren't `const`
+  either: `MKPointOfInterestFilter.including(const [...])`.
 - The imperative half lives on `MKMapViewController` (from `onMapCreated`;
   non-null only inside/after it): `camera`/`region` getters (`null` before the
   first layout), `setCamera`/`setRegion`/`setCenter(animated:)`,

@@ -68,6 +68,54 @@ void main() {
     });
   });
 
+  group('caller-owned lists', () {
+    test('snapshots outer and interior rings, so a later mutation is a new '
+        'value', () {
+      final outer = [
+        CLLocationCoordinate2D(latitude: 0, longitude: 0),
+        CLLocationCoordinate2D(latitude: 0, longitude: 10),
+        CLLocationCoordinate2D(latitude: 10, longitude: 10),
+      ];
+      final hole = [
+        CLLocationCoordinate2D(latitude: 2, longitude: 2),
+        CLLocationCoordinate2D(latitude: 2, longitude: 4),
+        CLLocationCoordinate2D(latitude: 4, longitude: 4),
+      ];
+      final holes = [hole];
+      MKPolygon build() => .new(
+        id: const .new('zone'),
+        coordinates: outer,
+        interiorPolygons: holes,
+      );
+      final before = build();
+
+      outer.add(applePark);
+      hole.add(applePark);
+      holes.add([applePark, infiniteLoop, applePark]);
+
+      check(before.coordinates).length.equals(3);
+      check(before.interiorPolygons).length.equals(1);
+      check(before.interiorPolygons.single).length.equals(3);
+      check(before == build()).isFalse();
+      check(() => before.coordinates.add(applePark)).throws<UnsupportedError>();
+      check(() => before.interiorPolygons.add([])).throws<UnsupportedError>();
+      check(() => before.interiorPolygons.single.add(applePark))
+          .throws<UnsupportedError>();
+    });
+
+    test('a mutated inner ring alone is a new value', () {
+      final hole = [applePark, infiniteLoop, applePark];
+      MKPolygon build() => .new(
+        id: const .new('zone'),
+        coordinates: [applePark, infiniteLoop, applePark],
+        interiorPolygons: [hole],
+      );
+      final before = build();
+      hole.add(infiniteLoop);
+      check(before == build()).isFalse();
+    });
+  });
+
   group('tap consumption', () {
     test('consumeTapEvents is explicit on the wire', () {
       check(polygon('x').toPlatform().consumeTapEvents).isFalse();

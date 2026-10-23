@@ -85,6 +85,34 @@ void main() {
     });
   });
 
+  group('finite geometry', () {
+    MKPointAnnotation at({
+      Offset anchorPoint = const .new(0.5, 1),
+      double zPriority = 500,
+    }) => .new(
+      id: const .new('a'),
+      coordinate: applePark,
+      anchorPoint: anchorPoint,
+      zPriority: zPriority,
+    );
+
+    for (final bad in [double.nan, double.infinity, double.negativeInfinity]) {
+      test('rejects a $bad anchorPoint coordinate or zPriority', () {
+        check(() => at(anchorPoint: .new(bad, 1))).throws<ArgumentError>();
+        check(() => at(anchorPoint: .new(0.5, bad))).throws<ArgumentError>();
+        check(() => at(zPriority: bad)).throws<ArgumentError>();
+      });
+    }
+
+    test(
+      'accepts an anchorPoint outside the image and any finite zPriority',
+      () {
+        check(() => at(anchorPoint: const .new(-0.5, 2), zPriority: -1000))
+            .returnsNormally();
+      },
+    );
+  });
+
   group('equality', () {
     test('select and drag closure identity does not affect equality', () {
       MKPointAnnotation withCallbacks() => .new(

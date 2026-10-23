@@ -24,6 +24,14 @@ void checkNonNegative(double value, String name) {
   }
 }
 
+/// Throws [ArgumentError] unless [value] is finite and `> 0`.
+@internal
+void checkPositive(double value, String name) {
+  if (!(value > 0 && value.isFinite)) {
+    throw ArgumentError.value(value, name, 'must be a finite value > 0');
+  }
+}
+
 /// Throws [ArgumentError] when [onTap] is set on an overlay that does not
 /// capture taps — the callback could never fire.
 @internal

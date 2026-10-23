@@ -184,15 +184,13 @@ final class _MKMapViewState extends State<MKMapView>
   Map<MKPolylineId, MKPolyline> _polylines = const {};
   Map<MKPolygonId, MKPolygon> _polygons = const {};
   Map<MKCircleId, MKCircle> _circles = const {};
+  Set<MKMapFeatureOptions> _selectableMapFeatures = const {};
 
   @override
   void initState() {
     super.initState();
     _checkWidget();
-    _annotations = {for (final a in widget.annotations) a.id: a};
-    _polylines = {for (final p in widget.polylines) p.id: p};
-    _polygons = {for (final p in widget.polygons) p.id: p};
-    _circles = {for (final c in widget.circles) c.id: c};
+    _snapshotWidget();
     if (widget.debugControllerFactory case final factory?) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (mounted) _wireController(factory(this));
@@ -287,6 +285,7 @@ final class _MKMapViewState extends State<MKMapView>
   /// platform view (and its host API handler) exists.
   void _wireController(MKMapViewControllerImpl controller) {
     _controller = controller;
+    _snapshotWidget();
     controller.initialize(
       initialCamera: widget.initialCamera,
       configuration: _platformConfiguration(),
@@ -331,7 +330,10 @@ final class _MKMapViewState extends State<MKMapView>
     );
   }
 
-  bool _configurationChanged(MKMapView old) =>
+  bool _configurationChanged(
+    MKMapView old,
+    Set<MKMapFeatureOptions> sentSelectableMapFeatures,
+  ) =>
       widget.preferredConfiguration != old.preferredConfiguration ||
       widget.isZoomEnabled != old.isZoomEnabled ||
       widget.isScrollEnabled != old.isScrollEnabled ||
@@ -344,7 +346,7 @@ final class _MKMapViewState extends State<MKMapView>
       widget.userTrackingMode != old.userTrackingMode ||
       widget.cameraZoomRange != old.cameraZoomRange ||
       widget.cameraBoundary != old.cameraBoundary ||
-      !setEquals(widget.selectableMapFeatures, old.selectableMapFeatures) ||
+      !setEquals(widget.selectableMapFeatures, sentSelectableMapFeatures) ||
       widget.insetsLayoutMarginsFromSafeArea !=
           old.insetsLayoutMarginsFromSafeArea;
 
@@ -352,40 +354,51 @@ final class _MKMapViewState extends State<MKMapView>
   void didUpdateWidget(covariant MKMapView oldWidget) {
     super.didUpdateWidget(oldWidget);
     _checkWidget();
-    _updateDispatchTables();
+    final sent = (
+      annotations: _annotations.values.toSet(),
+      polylines: _polylines.values.toSet(),
+      polygons: _polygons.values.toSet(),
+      circles: _circles.values.toSet(),
+      selectableMapFeatures: _selectableMapFeatures,
+    );
+    _snapshotWidget();
     final c = _controller;
     if (c == null) return;
 
-    _updateConfiguration(c, oldWidget);
-    _updateAnnotations(c, oldWidget);
-    _updatePolylines(c, oldWidget);
-    _updatePolygons(c, oldWidget);
-    _updateCircles(c, oldWidget);
+    if (_configurationChanged(oldWidget, sent.selectableMapFeatures)) {
+      c.updateMapConfiguration(_platformConfiguration());
+    }
+    _updateAnnotations(c, sent.annotations);
+    _updatePolylines(c, sent.polylines);
+    _updatePolygons(c, sent.polygons);
+    _updateCircles(c, sent.circles);
   }
 
-  void _updateDispatchTables() {
-    // Refresh the id→object dispatch tables on every rebuild, before the diff
-    // gates below. The models' `==` excludes callbacks (so a closure swap
-    // doesn't trigger a needless native recycle); a rebuild that changes only
-    // an `onTap`/`onDrag*` closure is therefore `setEquals`-equal and skips the
-    // native update — but these tables back inbound event dispatch and must
-    // still pick up the fresh closures, or a tap fires stale captured state.
+  void _snapshotWidget() {
+    // The snapshot is what native last received: the next diff compares
+    // against it, not `oldWidget`, whose Sets a caller who mutates in place
+    // shares with the new widget.
+    //
+    // The id→object maps also back inbound event dispatch. The models' `==`
+    // excludes callbacks (so a closure swap doesn't trigger a needless native
+    // recycle); a rebuild that changes only an `onTap`/`onDrag*` closure is
+    // therefore `setEquals`-equal and skips the native update — but dispatch
+    // must still pick up the fresh closures, or a tap fires stale captured
+    // state.
     _annotations = {for (final a in widget.annotations) a.id: a};
     _polylines = {for (final p in widget.polylines) p.id: p};
     _polygons = {for (final p in widget.polygons) p.id: p};
     _circles = {for (final o in widget.circles) o.id: o};
+    _selectableMapFeatures = {...widget.selectableMapFeatures};
   }
 
-  void _updateConfiguration(MKMapViewControllerImpl c, MKMapView oldWidget) {
-    if (_configurationChanged(oldWidget)) {
-      c.updateMapConfiguration(_platformConfiguration());
-    }
-  }
-
-  void _updateAnnotations(MKMapViewControllerImpl c, MKMapView oldWidget) {
-    if (!setEquals(widget.annotations, oldWidget.annotations)) {
+  void _updateAnnotations(
+    MKMapViewControllerImpl c,
+    Set<MKPointAnnotation> sent,
+  ) {
+    if (!setEquals(widget.annotations, sent)) {
       final updates = MapObjectUpdates.between(
-        oldWidget.annotations,
+        sent,
         widget.annotations,
         idOf: (a) => a.id.value,
       );
@@ -393,10 +406,10 @@ final class _MKMapViewState extends State<MKMapView>
     }
   }
 
-  void _updatePolylines(MKMapViewControllerImpl c, MKMapView oldWidget) {
-    if (!setEquals(widget.polylines, oldWidget.polylines)) {
+  void _updatePolylines(MKMapViewControllerImpl c, Set<MKPolyline> sent) {
+    if (!setEquals(widget.polylines, sent)) {
       final updates = MapObjectUpdates.between(
-        oldWidget.polylines,
+        sent,
         widget.polylines,
         idOf: (p) => p.id.value,
       );
@@ -404,10 +417,10 @@ final class _MKMapViewState extends State<MKMapView>
     }
   }
 
-  void _updatePolygons(MKMapViewControllerImpl c, MKMapView oldWidget) {
-    if (!setEquals(widget.polygons, oldWidget.polygons)) {
+  void _updatePolygons(MKMapViewControllerImpl c, Set<MKPolygon> sent) {
+    if (!setEquals(widget.polygons, sent)) {
       final updates = MapObjectUpdates.between(
-        oldWidget.polygons,
+        sent,
         widget.polygons,
         idOf: (p) => p.id.value,
       );
@@ -415,10 +428,10 @@ final class _MKMapViewState extends State<MKMapView>
     }
   }
 
-  void _updateCircles(MKMapViewControllerImpl c, MKMapView oldWidget) {
-    if (!setEquals(widget.circles, oldWidget.circles)) {
+  void _updateCircles(MKMapViewControllerImpl c, Set<MKCircle> sent) {
+    if (!setEquals(widget.circles, sent)) {
       final updates = MapObjectUpdates.between(
-        oldWidget.circles,
+        sent,
         widget.circles,
         idOf: (o) => o.id.value,
       );

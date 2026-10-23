@@ -31,19 +31,24 @@ final class MKPolyline {
   /// [consumeTapEvents].
   new({
     required this.id,
-    required this.coordinates,
+    required List<CLLocationCoordinate2D> coordinates,
     this.strokeColor = const .new(0xFF000000),
     this.lineWidth = 10,
     this.lineCap = .round,
     this.lineJoin = .round,
-    this.lineDashPattern,
-    this.gradientColors = const [],
+    List<double>? lineDashPattern,
+    List<Color> gradientColors = const [],
     this.isHidden = false,
     this.zIndex = 0,
     this.consumeTapEvents = false,
     this.level = .aboveRoads,
     this.onTap,
-  }) : isGeodesic = false {
+  }) : coordinates = .unmodifiable(coordinates),
+       lineDashPattern = lineDashPattern == null
+           ? null
+           : .unmodifiable(lineDashPattern),
+       gradientColors = .unmodifiable(gradientColors),
+       isGeodesic = false {
     _validate();
   }
 
@@ -52,19 +57,24 @@ final class MKPolyline {
   /// See: https://developer.apple.com/documentation/mapkit/mkgeodesicpolyline
   new geodesic({
     required this.id,
-    required this.coordinates,
+    required List<CLLocationCoordinate2D> coordinates,
     this.strokeColor = const .new(0xFF000000),
     this.lineWidth = 10,
     this.lineCap = .round,
     this.lineJoin = .round,
-    this.lineDashPattern,
-    this.gradientColors = const [],
+    List<double>? lineDashPattern,
+    List<Color> gradientColors = const [],
     this.isHidden = false,
     this.zIndex = 0,
     this.consumeTapEvents = false,
     this.level = .aboveRoads,
     this.onTap,
-  }) : isGeodesic = true {
+  }) : coordinates = .unmodifiable(coordinates),
+       lineDashPattern = lineDashPattern == null
+           ? null
+           : .unmodifiable(lineDashPattern),
+       gradientColors = .unmodifiable(gradientColors),
+       isGeodesic = true {
     _validate();
   }
 

@@ -43,6 +43,7 @@ void main() {
     bool isZoomEnabled = true,
     bool showsUserLocation = false,
     MKCameraZoomRange cameraZoomRange = .unbounded,
+    Set<MKMapFeatureOptions> selectableMapFeatures = const {},
     void Function(MKMapViewController)? onMapCreated,
     VoidCallback? onCameraMoveStarted,
     ValueChanged<MKMapCamera>? onCameraMove,
@@ -63,6 +64,7 @@ void main() {
       isZoomEnabled: isZoomEnabled,
       showsUserLocation: showsUserLocation,
       cameraZoomRange: cameraZoomRange,
+      selectableMapFeatures: selectableMapFeatures,
       onMapCreated: onMapCreated,
       onCameraMoveStarted: onCameraMoveStarted,
       onCameraMove: onCameraMove,
@@ -237,6 +239,86 @@ void main() {
         1,
       );
       check(removedPolylines).deepEquals(['p']);
+    });
+
+    testWidgets('Sets mutated in place diff against what was sent', (
+      tester,
+    ) async {
+      final annotations = {annotation('a')};
+      final polylines = <MKPolyline>{};
+      final polygons = <MKPolygon>{};
+      final circles = <MKCircle>{};
+      final features = <MKMapFeatureOptions>{};
+      Widget build() => map(
+        annotations: annotations,
+        polylines: polylines,
+        polygons: polygons,
+        circles: circles,
+        selectableMapFeatures: features,
+      );
+      await tester.pumpWidget(build());
+      await tester.pump();
+
+      annotations.add(annotation('b'));
+      polylines.add(polyline('p'));
+      polygons.add(polygon('g'));
+      circles.add(circle('c'));
+      features.add(.pointsOfInterest);
+      await tester.pumpWidget(build());
+      await tester.pump();
+
+      host.expectCalls([
+        'initialize',
+        'updateMapConfiguration',
+        'updateAnnotations',
+        'updatePolylines',
+        'updatePolygons',
+        'updateCircles',
+      ]);
+      final (added, _, _) = host.calls.requireArgsAt<AnnotationUpdate>(2);
+      check(added.map((a) => a.id)).deepEquals(['b']);
+    });
+
+    testWidgets('initialize ignores Sets mutated in onMapCreated', (
+      tester,
+    ) async {
+      final annotations = {annotation('a')};
+      final polylines = <MKPolyline>{};
+      final polygons = <MKPolygon>{};
+      final circles = <MKCircle>{};
+      Widget build() => map(
+        annotations: annotations,
+        polylines: polylines,
+        polygons: polygons,
+        circles: circles,
+        onMapCreated: (_) {
+          annotations.add(annotation('b'));
+          polylines.add(polyline('p'));
+          polygons.add(polygon('g'));
+          circles.add(circle('c'));
+        },
+      );
+      await tester.pumpWidget(build());
+      await tester.pump();
+
+      final params = host.initializeParams();
+      check(params.annotations.map((a) => a.id)).deepEquals(['a']);
+      check(params.polylines).isEmpty();
+      check(params.polygons).isEmpty();
+      check(params.circles).isEmpty();
+
+      await tester.pumpWidget(build());
+      await tester.pump();
+
+      host.expectCalls([
+        'initialize',
+        'updateAnnotations',
+        'updatePolylines',
+        'updatePolygons',
+        'updateCircles',
+      ]);
+      final (added, _, _) = host.calls.requireArgsAt<AnnotationUpdate>(1);
+      check(added.map((a) => a.id)).deepEquals(['b']);
     });
 
     testWidgets('pushes one configuration update when a view prop changes', (

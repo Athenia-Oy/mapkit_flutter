@@ -303,18 +303,19 @@ final class MKMapViewControllerImpl implements MKMapViewController {
     required Set<MKPolyline> polylines,
     required Set<MKPolygon> polygons,
     required Set<MKCircle> circles,
-  }) => _enqueue(
-    () => _host.initialize(
-      .new(
-        initialCamera: initialCamera.toPlatform(),
-        configuration: configuration,
-        annotations: [for (final a in annotations) a.toPlatform()],
-        polylines: [for (final p in polylines) p.toPlatform()],
-        polygons: [for (final p in polygons) p.toPlatform()],
-        circles: [for (final c in circles) c.toPlatform()],
-      ),
-    ),
-  );
+  }) {
+    // Built now, not when the queue drains: the Sets are the caller's, and
+    // onMapCreated may mutate them in place before then.
+    final params = PlatformMapViewCreationParams(
+      initialCamera: initialCamera.toPlatform(),
+      configuration: configuration,
+      annotations: [for (final a in annotations) a.toPlatform()],
+      polylines: [for (final p in polylines) p.toPlatform()],
+      polygons: [for (final p in polygons) p.toPlatform()],
+      circles: [for (final c in circles) c.toPlatform()],
+    );
+    return _enqueue(() => _host.initialize(params));
+  }
 
   Future<void> updateMapConfiguration(PlatformMapConfiguration configuration) =>
       _enqueue(() => _host.updateMapConfiguration(configuration));
