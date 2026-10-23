@@ -20,8 +20,12 @@ dependencies:
   meta: ^1.17.0
 
 dev_dependencies:
+  api_summary: ^1.2.0
   build_runner: ^2.16.2
   checks: ^0.3.2
+  # Floor for `pub downgrade`: api_summary's analyzer reaches glob 2.0.0, whose
+  # file 6.0.0 doesn't compile against Dart 3's dart:io.
+  file: ^7.0.0
   flutter_test:
     sdk: flutter
   mockito: ^5.8.1
