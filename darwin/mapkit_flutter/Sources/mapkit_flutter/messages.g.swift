@@ -1187,7 +1187,6 @@ struct PlatformMapConfiguration: Hashable, CustomStringConvertible {
   var showsUserLocation: Bool
   var showsUserTrackingButton: Bool
   var userTrackingMode: PlatformUserTrackingMode
-  var viewRespectsSystemMinimumLayoutMargins: Bool
   var insetsLayoutMarginsFromSafeArea: Bool
   var layoutMargins: [Double?]? = nil
   var isRotateEnabled: Bool
@@ -1211,17 +1210,16 @@ struct PlatformMapConfiguration: Hashable, CustomStringConvertible {
     let showsUserLocation = pigeonVar_list[6] as! Bool
     let showsUserTrackingButton = pigeonVar_list[7] as! Bool
     let userTrackingMode = pigeonVar_list[8] as! PlatformUserTrackingMode
-    let viewRespectsSystemMinimumLayoutMargins = pigeonVar_list[9] as! Bool
-    let insetsLayoutMarginsFromSafeArea = pigeonVar_list[10] as! Bool
-    let layoutMargins: [Double?]? = nilOrValue(pigeonVar_list[11])
-    let isRotateEnabled = pigeonVar_list[12] as! Bool
-    let isScrollEnabled = pigeonVar_list[13] as! Bool
-    let isZoomEnabled = pigeonVar_list[14] as! Bool
-    let isPitchEnabled = pigeonVar_list[15] as! Bool
-    let selectableMapFeatures = pigeonVar_list[16] as! [PlatformMapFeatureOptions]
-    let pointOfInterestFilter: PlatformPointOfInterestFilter? = nilOrValue(pigeonVar_list[17])
-    let cameraZoomRange: PlatformCameraZoomRange? = nilOrValue(pigeonVar_list[18])
-    let cameraBoundary: PlatformCoordinateRegion? = nilOrValue(pigeonVar_list[19])
+    let insetsLayoutMarginsFromSafeArea = pigeonVar_list[9] as! Bool
+    let layoutMargins: [Double?]? = nilOrValue(pigeonVar_list[10])
+    let isRotateEnabled = pigeonVar_list[11] as! Bool
+    let isScrollEnabled = pigeonVar_list[12] as! Bool
+    let isZoomEnabled = pigeonVar_list[13] as! Bool
+    let isPitchEnabled = pigeonVar_list[14] as! Bool
+    let selectableMapFeatures = pigeonVar_list[15] as! [PlatformMapFeatureOptions]
+    let pointOfInterestFilter: PlatformPointOfInterestFilter? = nilOrValue(pigeonVar_list[16])
+    let cameraZoomRange: PlatformCameraZoomRange? = nilOrValue(pigeonVar_list[17])
+    let cameraBoundary: PlatformCoordinateRegion? = nilOrValue(pigeonVar_list[18])
 
     return PlatformMapConfiguration(
       kind: kind,
@@ -1233,7 +1231,6 @@ struct PlatformMapConfiguration: Hashable, CustomStringConvertible {
       showsUserLocation: showsUserLocation,
       showsUserTrackingButton: showsUserTrackingButton,
       userTrackingMode: userTrackingMode,
-      viewRespectsSystemMinimumLayoutMargins: viewRespectsSystemMinimumLayoutMargins,
       insetsLayoutMarginsFromSafeArea: insetsLayoutMarginsFromSafeArea,
       layoutMargins: layoutMargins,
       isRotateEnabled: isRotateEnabled,
@@ -1257,7 +1254,6 @@ struct PlatformMapConfiguration: Hashable, CustomStringConvertible {
       showsUserLocation,
       showsUserTrackingButton,
       userTrackingMode,
-      viewRespectsSystemMinimumLayoutMargins,
       insetsLayoutMarginsFromSafeArea,
       layoutMargins,
       isRotateEnabled,
@@ -1274,7 +1270,7 @@ struct PlatformMapConfiguration: Hashable, CustomStringConvertible {
     if Swift.type(of: lhs) != Swift.type(of: rhs) {
       return false
     }
-    return MessagesPigeonInternal.deepEquals(lhs.kind, rhs.kind) && MessagesPigeonInternal.deepEquals(lhs.emphasisStyle, rhs.emphasisStyle) && MessagesPigeonInternal.deepEquals(lhs.elevationStyle, rhs.elevationStyle) && MessagesPigeonInternal.deepEquals(lhs.showsTraffic, rhs.showsTraffic) && MessagesPigeonInternal.deepEquals(lhs.showsCompass, rhs.showsCompass) && MessagesPigeonInternal.deepEquals(lhs.showsScale, rhs.showsScale) && MessagesPigeonInternal.deepEquals(lhs.showsUserLocation, rhs.showsUserLocation) && MessagesPigeonInternal.deepEquals(lhs.showsUserTrackingButton, rhs.showsUserTrackingButton) && MessagesPigeonInternal.deepEquals(lhs.userTrackingMode, rhs.userTrackingMode) && MessagesPigeonInternal.deepEquals(lhs.viewRespectsSystemMinimumLayoutMargins, rhs.viewRespectsSystemMinimumLayoutMargins) && MessagesPigeonInternal.deepEquals(lhs.insetsLayoutMarginsFromSafeArea, rhs.insetsLayoutMarginsFromSafeArea) && MessagesPigeonInternal.deepEquals(lhs.layoutMargins, rhs.layoutMargins) && MessagesPigeonInternal.deepEquals(lhs.isRotateEnabled, rhs.isRotateEnabled) && MessagesPigeonInternal.deepEquals(lhs.isScrollEnabled, rhs.isScrollEnabled) && MessagesPigeonInternal.deepEquals(lhs.isZoomEnabled, rhs.isZoomEnabled) && MessagesPigeonInternal.deepEquals(lhs.isPitchEnabled, rhs.isPitchEnabled) && MessagesPigeonInternal.deepEquals(lhs.selectableMapFeatures, rhs.selectableMapFeatures) && MessagesPigeonInternal.deepEquals(lhs.pointOfInterestFilter, rhs.pointOfInterestFilter) && MessagesPigeonInternal.deepEquals(lhs.cameraZoomRange, rhs.cameraZoomRange) && MessagesPigeonInternal.deepEquals(lhs.cameraBoundary, rhs.cameraBoundary)
+    return MessagesPigeonInternal.deepEquals(lhs.kind, rhs.kind) && MessagesPigeonInternal.deepEquals(lhs.emphasisStyle, rhs.emphasisStyle) && MessagesPigeonInternal.deepEquals(lhs.elevationStyle, rhs.elevationStyle) && MessagesPigeonInternal.deepEquals(lhs.showsTraffic, rhs.showsTraffic) && MessagesPigeonInternal.deepEquals(lhs.showsCompass, rhs.showsCompass) && MessagesPigeonInternal.deepEquals(lhs.showsScale, rhs.showsScale) && MessagesPigeonInternal.deepEquals(lhs.showsUserLocation, rhs.showsUserLocation) && MessagesPigeonInternal.deepEquals(lhs.showsUserTrackingButton, rhs.showsUserTrackingButton) && MessagesPigeonInternal.deepEquals(lhs.userTrackingMode, rhs.userTrackingMode) && MessagesPigeonInternal.deepEquals(lhs.insetsLayoutMarginsFromSafeArea, rhs.insetsLayoutMarginsFromSafeArea) && MessagesPigeonInternal.deepEquals(lhs.layoutMargins, rhs.layoutMargins) && MessagesPigeonInternal.deepEquals(lhs.isRotateEnabled, rhs.isRotateEnabled) && MessagesPigeonInternal.deepEquals(lhs.isScrollEnabled, rhs.isScrollEnabled) && MessagesPigeonInternal.deepEquals(lhs.isZoomEnabled, rhs.isZoomEnabled) && MessagesPigeonInternal.deepEquals(lhs.isPitchEnabled, rhs.isPitchEnabled) && MessagesPigeonInternal.deepEquals(lhs.selectableMapFeatures, rhs.selectableMapFeatures) && MessagesPigeonInternal.deepEquals(lhs.pointOfInterestFilter, rhs.pointOfInterestFilter) && MessagesPigeonInternal.deepEquals(lhs.cameraZoomRange, rhs.cameraZoomRange) && MessagesPigeonInternal.deepEquals(lhs.cameraBoundary, rhs.cameraBoundary)
   }
 
   func hash(into hasher: inout Hasher) {
@@ -1288,7 +1284,6 @@ struct PlatformMapConfiguration: Hashable, CustomStringConvertible {
     MessagesPigeonInternal.deepHash(value: showsUserLocation, hasher: &hasher)
     MessagesPigeonInternal.deepHash(value: showsUserTrackingButton, hasher: &hasher)
     MessagesPigeonInternal.deepHash(value: userTrackingMode, hasher: &hasher)
-    MessagesPigeonInternal.deepHash(value: viewRespectsSystemMinimumLayoutMargins, hasher: &hasher)
     MessagesPigeonInternal.deepHash(value: insetsLayoutMarginsFromSafeArea, hasher: &hasher)
     MessagesPigeonInternal.deepHash(value: layoutMargins, hasher: &hasher)
     MessagesPigeonInternal.deepHash(value: isRotateEnabled, hasher: &hasher)
@@ -1302,7 +1297,7 @@ struct PlatformMapConfiguration: Hashable, CustomStringConvertible {
   }
 
   public var description: String {
-    return "PlatformMapConfiguration(kind: \(String(describing: kind)), emphasisStyle: \(String(describing: emphasisStyle)), elevationStyle: \(String(describing: elevationStyle)), showsTraffic: \(String(describing: showsTraffic)), showsCompass: \(String(describing: showsCompass)), showsScale: \(String(describing: showsScale)), showsUserLocation: \(String(describing: showsUserLocation)), showsUserTrackingButton: \(String(describing: showsUserTrackingButton)), userTrackingMode: \(String(describing: userTrackingMode)), viewRespectsSystemMinimumLayoutMargins: \(String(describing: viewRespectsSystemMinimumLayoutMargins)), insetsLayoutMarginsFromSafeArea: \(String(describing: insetsLayoutMarginsFromSafeArea)), layoutMargins: \(String(describing: layoutMargins)), isRotateEnabled: \(String(describing: isRotateEnabled)), isScrollEnabled: \(String(describing: isScrollEnabled)), isZoomEnabled: \(String(describing: isZoomEnabled)), isPitchEnabled: \(String(describing: isPitchEnabled)), selectableMapFeatures: \(String(describing: selectableMapFeatures)), pointOfInterestFilter: \(String(describing: pointOfInterestFilter)), cameraZoomRange: \(String(describing: cameraZoomRange)), cameraBoundary: \(String(describing: cameraBoundary)))"
+    return "PlatformMapConfiguration(kind: \(String(describing: kind)), emphasisStyle: \(String(describing: emphasisStyle)), elevationStyle: \(String(describing: elevationStyle)), showsTraffic: \(String(describing: showsTraffic)), showsCompass: \(String(describing: showsCompass)), showsScale: \(String(describing: showsScale)), showsUserLocation: \(String(describing: showsUserLocation)), showsUserTrackingButton: \(String(describing: showsUserTrackingButton)), userTrackingMode: \(String(describing: userTrackingMode)), insetsLayoutMarginsFromSafeArea: \(String(describing: insetsLayoutMarginsFromSafeArea)), layoutMargins: \(String(describing: layoutMargins)), isRotateEnabled: \(String(describing: isRotateEnabled)), isScrollEnabled: \(String(describing: isScrollEnabled)), isZoomEnabled: \(String(describing: isZoomEnabled)), isPitchEnabled: \(String(describing: isPitchEnabled)), selectableMapFeatures: \(String(describing: selectableMapFeatures)), pointOfInterestFilter: \(String(describing: pointOfInterestFilter)), cameraZoomRange: \(String(describing: cameraZoomRange)), cameraBoundary: \(String(describing: cameraBoundary)))"
   }
 }
 

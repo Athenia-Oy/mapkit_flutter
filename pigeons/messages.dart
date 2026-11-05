@@ -497,7 +497,6 @@ class PlatformMapConfiguration {
     required this.showsUserLocation,
     required this.showsUserTrackingButton,
     required this.userTrackingMode,
-    required this.viewRespectsSystemMinimumLayoutMargins,
     required this.insetsLayoutMarginsFromSafeArea,
     required this.layoutMargins,
     required this.isRotateEnabled,
@@ -519,7 +518,6 @@ class PlatformMapConfiguration {
   final bool showsUserLocation;
   final bool showsUserTrackingButton;
   final PlatformUserTrackingMode userTrackingMode;
-  final bool viewRespectsSystemMinimumLayoutMargins;
   final bool insetsLayoutMarginsFromSafeArea;
   final List<double?>? layoutMargins;
   final bool isRotateEnabled;

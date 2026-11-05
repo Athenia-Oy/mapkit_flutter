@@ -102,8 +102,6 @@ final class const MKMapView({
   /// macOS.
   final Set<MKMapFeatureOptions> selectableMapFeatures = const {},
 
-  final bool viewRespectsSystemMinimumLayoutMargins = false,
-
   /// Whether layout margins include the safe area insets
   /// (`UIView.insetsLayoutMarginsFromSafeArea`). iOS only — must stay `true`
   /// on macOS.
@@ -322,7 +320,6 @@ final class _MKMapViewState extends State<MKMapView>
       showsUserLocation: widget.showsUserLocation,
       showsUserTrackingButton: widget.showsUserTrackingButton,
       userTrackingMode: widget.userTrackingMode,
-      viewRespectsSystemMinimumLayoutMargins: widget.viewRespectsSystemMinimumLayoutMargins,
       insetsLayoutMarginsFromSafeArea: widget.insetsLayoutMarginsFromSafeArea,
       layoutMargins: widget.layoutMargins,
       isRotateEnabled: widget.isRotateEnabled,

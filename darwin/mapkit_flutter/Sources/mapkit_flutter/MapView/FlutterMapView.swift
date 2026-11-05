@@ -167,7 +167,6 @@ class FlutterMapView: MKMapView, PlatformGestureRecognizerDelegate {
 
         #if os(iOS)
         self.insetsLayoutMarginsFromSafeArea = config.insetsLayoutMarginsFromSafeArea
-        self.viewRespectsSystemMinimalLayoutMargins = !config.insetsLayoutMarginsFromSafeArea
 
         let margins = config.layoutMargins ?? []
 
