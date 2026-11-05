@@ -1284,7 +1284,9 @@ class PlatformMapConfiguration {
     required this.showsUserLocation,
     required this.showsUserTrackingButton,
     required this.userTrackingMode,
+    required this.viewRespectsSystemMinimumLayoutMargins,
     required this.insetsLayoutMarginsFromSafeArea,
+    this.layoutMargins,
     required this.isRotateEnabled,
     required this.isScrollEnabled,
     required this.isZoomEnabled,
@@ -1313,7 +1315,11 @@ class PlatformMapConfiguration {
 
   PlatformUserTrackingMode userTrackingMode;
 
+  bool viewRespectsSystemMinimumLayoutMargins;
+
   bool insetsLayoutMarginsFromSafeArea;
+
+  List<double?>? layoutMargins;
 
   bool isRotateEnabled;
 
@@ -1342,7 +1348,9 @@ class PlatformMapConfiguration {
       showsUserLocation,
       showsUserTrackingButton,
       userTrackingMode,
+      viewRespectsSystemMinimumLayoutMargins,
       insetsLayoutMarginsFromSafeArea,
+      layoutMargins,
       isRotateEnabled,
       isScrollEnabled,
       isZoomEnabled,
@@ -1370,16 +1378,18 @@ class PlatformMapConfiguration {
       showsUserLocation: result[6]! as bool,
       showsUserTrackingButton: result[7]! as bool,
       userTrackingMode: result[8]! as PlatformUserTrackingMode,
-      insetsLayoutMarginsFromSafeArea: result[9]! as bool,
-      isRotateEnabled: result[10]! as bool,
-      isScrollEnabled: result[11]! as bool,
-      isZoomEnabled: result[12]! as bool,
-      isPitchEnabled: result[13]! as bool,
-      selectableMapFeatures: (result[14]! as List<Object?>)
+      viewRespectsSystemMinimumLayoutMargins: result[9]! as bool,
+      insetsLayoutMarginsFromSafeArea: result[10]! as bool,
+      layoutMargins: (result[11] as List<Object?>?)?.cast<double?>(),
+      isRotateEnabled: result[12]! as bool,
+      isScrollEnabled: result[13]! as bool,
+      isZoomEnabled: result[14]! as bool,
+      isPitchEnabled: result[15]! as bool,
+      selectableMapFeatures: (result[16]! as List<Object?>)
           .cast<PlatformMapFeatureOptions>(),
-      pointOfInterestFilter: result[15] as PlatformPointOfInterestFilter?,
-      cameraZoomRange: result[16] as PlatformCameraZoomRange?,
-      cameraBoundary: result[17] as PlatformCoordinateRegion?,
+      pointOfInterestFilter: result[17] as PlatformPointOfInterestFilter?,
+      cameraZoomRange: result[18] as PlatformCameraZoomRange?,
+      cameraBoundary: result[19] as PlatformCoordinateRegion?,
     );
   }
 
@@ -1403,9 +1413,14 @@ class PlatformMapConfiguration {
         _deepEquals(showsUserTrackingButton, other.showsUserTrackingButton) &&
         _deepEquals(userTrackingMode, other.userTrackingMode) &&
         _deepEquals(
+          viewRespectsSystemMinimumLayoutMargins,
+          other.viewRespectsSystemMinimumLayoutMargins,
+        ) &&
+        _deepEquals(
           insetsLayoutMarginsFromSafeArea,
           other.insetsLayoutMarginsFromSafeArea,
         ) &&
+        _deepEquals(layoutMargins, other.layoutMargins) &&
         _deepEquals(isRotateEnabled, other.isRotateEnabled) &&
         _deepEquals(isScrollEnabled, other.isScrollEnabled) &&
         _deepEquals(isZoomEnabled, other.isZoomEnabled) &&
@@ -1422,7 +1437,7 @@ class PlatformMapConfiguration {
 
   @override
   String toString() {
-    return 'PlatformMapConfiguration(kind: $kind, emphasisStyle: $emphasisStyle, elevationStyle: $elevationStyle, showsTraffic: $showsTraffic, showsCompass: $showsCompass, showsScale: $showsScale, showsUserLocation: $showsUserLocation, showsUserTrackingButton: $showsUserTrackingButton, userTrackingMode: $userTrackingMode, insetsLayoutMarginsFromSafeArea: $insetsLayoutMarginsFromSafeArea, isRotateEnabled: $isRotateEnabled, isScrollEnabled: $isScrollEnabled, isZoomEnabled: $isZoomEnabled, isPitchEnabled: $isPitchEnabled, selectableMapFeatures: $selectableMapFeatures, pointOfInterestFilter: $pointOfInterestFilter, cameraZoomRange: $cameraZoomRange, cameraBoundary: $cameraBoundary)';
+    return 'PlatformMapConfiguration(kind: $kind, emphasisStyle: $emphasisStyle, elevationStyle: $elevationStyle, showsTraffic: $showsTraffic, showsCompass: $showsCompass, showsScale: $showsScale, showsUserLocation: $showsUserLocation, showsUserTrackingButton: $showsUserTrackingButton, userTrackingMode: $userTrackingMode, viewRespectsSystemMinimumLayoutMargins: $viewRespectsSystemMinimumLayoutMargins, insetsLayoutMarginsFromSafeArea: $insetsLayoutMarginsFromSafeArea, layoutMargins: $layoutMargins, isRotateEnabled: $isRotateEnabled, isScrollEnabled: $isScrollEnabled, isZoomEnabled: $isZoomEnabled, isPitchEnabled: $isPitchEnabled, selectableMapFeatures: $selectableMapFeatures, pointOfInterestFilter: $pointOfInterestFilter, cameraZoomRange: $cameraZoomRange, cameraBoundary: $cameraBoundary)';
   }
 }
 

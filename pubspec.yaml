@@ -18,7 +18,6 @@ dependencies:
   flutter:
     sdk: flutter
   meta: ^1.17.0
-
 dev_dependencies:
   api_summary: ^1.2.0
   build_runner: ^2.16.2

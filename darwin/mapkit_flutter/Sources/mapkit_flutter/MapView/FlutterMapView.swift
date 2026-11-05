@@ -167,6 +167,24 @@ class FlutterMapView: MKMapView, PlatformGestureRecognizerDelegate {
 
         #if os(iOS)
         self.insetsLayoutMarginsFromSafeArea = config.insetsLayoutMarginsFromSafeArea
+        self.viewRespectsSystemMinimalLayoutMargins = !config.insetsLayoutMarginsFromSafeArea
+
+        let margins = config.layoutMargins ?? []
+
+        func extractCGFloat(from element: Any?) -> CGFloat? {
+            if let number = element as? NSNumber {
+                return CGFloat(number.doubleValue)
+            }
+            return nil
+        }
+
+        let top = extractCGFloat(from: margins.indices.contains(0) ? margins[0] : nil) ?? 0.0
+        let left = extractCGFloat(from: margins.indices.contains(1) ? margins[1] : nil) ?? 0.0
+        let bottom = extractCGFloat(from: margins.indices.contains(2) ? margins[2] : nil) ?? 0.0
+        let right = extractCGFloat(from: margins.indices.contains(3) ? margins[3] : nil) ?? 0.0
+
+        self.layoutMargins = UIEdgeInsets(top: top, left: left, bottom: bottom, right: right)
+
         // `selectableMapFeatures` / `MKMapFeatureOptions` are iOS-only.
         self.selectableMapFeatures = Self.mapFeatureOptions(config.selectableMapFeatures)
         #endif

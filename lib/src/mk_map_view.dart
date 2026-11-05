@@ -102,10 +102,14 @@ final class const MKMapView({
   /// macOS.
   final Set<MKMapFeatureOptions> selectableMapFeatures = const {},
 
+  final bool viewRespectsSystemMinimumLayoutMargins = false,
+
   /// Whether layout margins include the safe area insets
   /// (`UIView.insetsLayoutMarginsFromSafeArea`). iOS only — must stay `true`
   /// on macOS.
   final bool insetsLayoutMarginsFromSafeArea = true,
+
+  final List<double?>? layoutMargins = const [],
 
   /// Point annotations displayed on the map, diffed by [MKAnnotationId].
   final Set<MKPointAnnotation> annotations = const {},
@@ -318,7 +322,9 @@ final class _MKMapViewState extends State<MKMapView>
       showsUserLocation: widget.showsUserLocation,
       showsUserTrackingButton: widget.showsUserTrackingButton,
       userTrackingMode: widget.userTrackingMode,
+      viewRespectsSystemMinimumLayoutMargins: widget.viewRespectsSystemMinimumLayoutMargins,
       insetsLayoutMarginsFromSafeArea: widget.insetsLayoutMarginsFromSafeArea,
+      layoutMargins: widget.layoutMargins,
       isRotateEnabled: widget.isRotateEnabled,
       isScrollEnabled: widget.isScrollEnabled,
       isZoomEnabled: widget.isZoomEnabled,
