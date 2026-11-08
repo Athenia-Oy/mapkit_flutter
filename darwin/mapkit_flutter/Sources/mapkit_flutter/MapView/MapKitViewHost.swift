@@ -203,7 +203,12 @@ public class MapKitViewHost: NSObject, @preconcurrency MapKitHostApi {
         #if os(iOS)
         let coord = coordinate.clCoordinate
         Task { @MainActor [weak self] in
-            let sceneResult = await Result { try await Self.requestLookAroundScene(at: coord) }
+            let sceneResult: Result<MKLookAroundScene?, Error>
+            do {
+                sceneResult = .success(try await Self.requestLookAroundScene(at: coord))
+            } catch {
+                sceneResult = .failure(error)
+            }
             guard let self, !self.isDisposed else {
                 completion(.failure(mapKitError(.lookAroundFailed, "The map view was disposed during Look Around.")))
                 return
@@ -482,11 +487,23 @@ extension MapKitViewHost {
         // compositing pass below; the snapshotter gets its own copy off-actor.
         let snapshotOptions = try Self.makeSnapshotOptions(input)
 
-        let snapshot = try await Self.startSnapshot(input)
+        let snapshot: MKMapSnapshotter.Snapshot
+        do {
+            snapshot = try await Self.startSnapshot(input)
+        } catch {
+            try self.checkNotDisposedDuringSnapshot()
+            throw error
+        }
         try self.checkNotDisposedDuringSnapshot()
-        let tiles = options.showsOverlays
-            ? try await self.loadTiles(for: snapshot, in: viewport)
-            : SnapshotTiles(viewport: viewport)
+        let tiles: SnapshotTiles
+        do {
+            tiles = options.showsOverlays
+                ? try await self.loadTiles(for: snapshot, in: viewport)
+                : SnapshotTiles(viewport: viewport)
+        } catch {
+            try self.checkNotDisposedDuringSnapshot()
+            throw error
+        }
         try self.checkNotDisposedDuringSnapshot()
 
         #if os(iOS)
