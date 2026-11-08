@@ -124,7 +124,13 @@ abstract interface class MKMapViewController {
   /// Render the current map to a PNG via `MKMapSnapshotter`.
   ///
   /// Throws a [MapKitPlatformException] with code `snapshot-failed` when the
-  /// snapshotter fails (e.g. tile loading) or produces no image data.
+  /// snapshotter fails or produces no image data, when a tile overlay's tile
+  /// fails to load or isn't an image, a server's 404 page included, when tiles
+  /// take more than 60 seconds, when the view needs more than 1024 tiles or
+  /// can't project a tile, or when the map is disposed before the snapshot
+  /// finishes. `MKMapSnapshotter`
+  /// bakes labels and 3D buildings into its base map, so an overlay at
+  /// `aboveRoads` covers them here, unlike on the live map.
   Future<Uint8List> takeSnapshot([MKMapSnapshotOptions options = const .new()]);
 
   /// Open the Look Around (street-view) experience for a coordinate (iOS).
@@ -136,7 +142,8 @@ abstract interface class MKMapViewController {
   /// from, and code `unsupported-platform` on macOS.
   Future<bool> openLookAround(CLLocationCoordinate2D coordinate);
 
-  /// Add a custom raster tile overlay backed by a URL template.
+  /// Add a custom raster tile overlay backed by a URL template. [takeSnapshot]
+  /// includes it.
   ///
   /// The template uses `{x}`, `{y}`, `{z}` placeholders, e.g.
   /// `https://tile.openstreetmap.org/{z}/{x}/{y}.png`. Throws a
@@ -195,11 +202,26 @@ final class MKMapViewControllerImpl implements MKMapViewController {
   // messages always land in source order.
   Future<void> _tail = .value();
 
-  Future<T> _enqueue<T>(Future<T> Function() task) {
+  /// A caller's request: reaching a disposed map is the caller's misuse.
+  Future<T> _enqueue<T>(Future<T> Function() task) => _enqueueOr(
+    task,
+    whenDisposed: (completer) =>
+        completer.completeError(const MapKitDisposedException()),
+  );
+
+  /// The widget's own state push: nobody is left to want it once the map is
+  /// disposed, so it is dropped. A native rejection still surfaces.
+  Future<void> _enqueuePush(Future<void> Function() push) =>
+      _enqueueOr(push, whenDisposed: (completer) => completer.complete());
+
+  Future<T> _enqueueOr<T>(
+    Future<T> Function() task, {
+    required void Function(Completer<T> completer) whenDisposed,
+  }) {
     final completer = Completer<T>();
     _tail = _tail.then((_) async {
       if (_disposed) {
-        completer.completeError(const MapKitDisposedException());
+        whenDisposed(completer);
         return;
       }
       try {
@@ -233,17 +255,26 @@ final class MKMapViewControllerImpl implements MKMapViewController {
 
   @override
   Future<void> setCamera(MKMapCamera camera, {bool animated = true}) =>
-      _enqueue(() => _host.setCamera(camera.toPlatform(), animated));
+      _enqueue(() async {
+        await _host.setCamera(camera.toPlatform(), animated);
+        _dropInitialCamera();
+      });
 
   @override
   Future<void> setRegion(MKCoordinateRegion region, {bool animated = true}) =>
-      _enqueue(() => _host.setRegion(region.toPlatform(), animated));
+      _enqueue(() async {
+        await _host.setRegion(region.toPlatform(), animated);
+        _dropInitialCamera();
+      });
 
   @override
   Future<void> setCenter(
     CLLocationCoordinate2D coordinate, {
     bool animated = true,
-  }) => _enqueue(() => _host.setCenter(coordinate.toPlatform(), animated));
+  }) => _enqueue(() async {
+    await _host.setCenter(coordinate.toPlatform(), animated);
+    _recenterInitialCamera(coordinate.toPlatform());
+  });
 
   @override
   Future<Offset?> convertToPoint(CLLocationCoordinate2D coordinate) => _enqueue(
@@ -294,6 +325,15 @@ final class MKMapViewControllerImpl implements MKMapViewController {
 
   // ------------------------- Widget-driven mutations -------------------------
 
+  /// Non-null until native accepts `initialize`. A rejected one leaves the map
+  /// untouched, so the next push retries the whole state.
+  _InitialState? _pendingInitialState;
+
+  final _ObjectSync<MKPointAnnotation> _annotations = .new((a) => a.id.value);
+  final _ObjectSync<MKPolyline> _polylines = .new((p) => p.id.value);
+  final _ObjectSync<MKPolygon> _polygons = .new((p) => p.id.value);
+  final _ObjectSync<MKCircle> _circles = .new((c) => c.id.value);
+
   /// Pushes the initial map state now that the platform view exists. Ids are
   /// unique per kind — `MKMapView` rejects duplicates before calling this.
   Future<void> initialize({
@@ -304,50 +344,145 @@ final class MKMapViewControllerImpl implements MKMapViewController {
     required Set<MKPolygon> polygons,
     required Set<MKCircle> circles,
   }) {
-    // Built now, not when the queue drains: the Sets are the caller's, and
+    // Copied now, not when the queue drains: the Sets are the caller's, and
     // onMapCreated may mutate them in place before then.
-    final params = PlatformMapViewCreationParams(
-      initialCamera: initialCamera.toPlatform(),
+    _pendingInitialState = (
+      camera: initialCamera.toPlatform(),
       configuration: configuration,
-      annotations: [for (final a in annotations) a.toPlatform()],
-      polylines: [for (final p in polylines) p.toPlatform()],
-      polygons: [for (final p in polygons) p.toPlatform()],
-      circles: [for (final c in circles) c.toPlatform()],
     );
-    return _enqueue(() => _host.initialize(params));
+    _annotations.queued = {...annotations};
+    _polylines.queued = {...polylines};
+    _polygons.queued = {...polygons};
+    _circles.queued = {...circles};
+    return _enqueuePush(_pushInitialState);
   }
 
-  Future<void> updateMapConfiguration(PlatformMapConfiguration configuration) =>
-      _enqueue(() => _host.updateMapConfiguration(configuration));
+  Future<void> _pushInitialState() async {
+    final pending = _pendingInitialState;
+    if (pending == null) return;
+    final annotations = _annotations.queued;
+    final polylines = _polylines.queued;
+    final polygons = _polygons.queued;
+    final circles = _circles.queued;
+    await _host.initialize(
+      .new(
+        initialCamera: pending.camera,
+        configuration: pending.configuration,
+        annotations: [for (final a in annotations) a.toPlatform()],
+        polylines: [for (final p in polylines) p.toPlatform()],
+        polygons: [for (final p in polygons) p.toPlatform()],
+        circles: [for (final c in circles) c.toPlatform()],
+      ),
+    );
+    _pendingInitialState = null;
+    _annotations.accepted = annotations;
+    _polylines.accepted = polylines;
+    _polygons.accepted = polygons;
+    _circles.accepted = circles;
+  }
 
-  Future<void> updateAnnotations(MapObjectUpdates<MKPointAnnotation> updates) =>
-      _enqueue(
-        () => _host.updateAnnotations(
-          updates.toAdd.map((a) => a.toPlatform()).toList(),
-          updates.toChange.map((a) => a.toPlatform()).toList(),
-          updates.idsToRemove.toList(),
+  /// A retried `initialize` must not undo a move native accepted after the
+  /// rejected one.
+  void _dropInitialCamera() {
+    if (_pendingInitialState case (:final configuration, camera: _)) {
+      _pendingInitialState = (camera: null, configuration: configuration);
+    }
+  }
+
+  /// A center move leaves distance, heading and pitch to the initial camera,
+  /// which then still has to apply them.
+  void _recenterInitialCamera(PlatformCoordinate center) {
+    if (_pendingInitialState case (
+      :final configuration,
+      camera: final camera?,
+    )) {
+      _pendingInitialState = (
+        camera: .new(
+          centerCoordinate: center,
+          distance: camera.distance,
+          heading: camera.heading,
+          pitch: camera.pitch,
         ),
+        configuration: configuration,
       );
+    }
+  }
 
-  Future<void> updatePolylines(MapObjectUpdates<MKPolyline> updates) =>
-      _enqueue(
-        () => _host.updatePolylines(
-          updates.toAdd.map((p) => p.toPlatform()).toList(),
-          updates.toChange.map((p) => p.toPlatform()).toList(),
-          updates.idsToRemove.toList(),
-        ),
+  Future<void> updateMapConfiguration(PlatformMapConfiguration configuration) {
+    if (_pendingInitialState case final pending?) {
+      _pendingInitialState = (
+        camera: pending.camera,
+        configuration: configuration,
       );
+    }
+    return _enqueuePush(
+      () => _pendingInitialState == null
+          ? _host.updateMapConfiguration(configuration)
+          : _pushInitialState(),
+    );
+  }
 
-  Future<void> updatePolygons(MapObjectUpdates<MKPolygon> updates) => _enqueue(
-    () => _host.updatePolygons(
+  /// Brings native to [target], diffing when the queue reaches this push and
+  /// against what native accepted: a rejected batch stays undone, so the next
+  /// different [target] resends everything it held.
+  Future<void> _sync<T extends Object>(
+    _ObjectSync<T> sync,
+    Set<T> target,
+    Future<void> Function(MapObjectUpdates<T> updates) send,
+  ) {
+    if (setEquals(target, sync.queued)) return .value();
+    sync.queued = {...target};
+    return _enqueuePush(() async {
+      if (_pendingInitialState != null) {
+        await _pushInitialState();
+        return;
+      }
+      final latest = sync.queued;
+      final updates = MapObjectUpdates.between(
+        sync.accepted,
+        latest,
+        idOf: sync.idOf,
+      );
+      if (updates.isEmpty()) return;
+      await send(updates);
+      sync.accepted = latest;
+    });
+  }
+
+  Future<void> syncAnnotations(Set<MKPointAnnotation> target) => _sync(
+    _annotations,
+    target,
+    (updates) => _host.updateAnnotations(
+      updates.toAdd.map((a) => a.toPlatform()).toList(),
+      updates.toChange.map((a) => a.toPlatform()).toList(),
+      updates.idsToRemove.toList(),
+    ),
+  );
+
+  Future<void> syncPolylines(Set<MKPolyline> target) => _sync(
+    _polylines,
+    target,
+    (updates) => _host.updatePolylines(
       updates.toAdd.map((p) => p.toPlatform()).toList(),
       updates.toChange.map((p) => p.toPlatform()).toList(),
       updates.idsToRemove.toList(),
     ),
   );
 
-  Future<void> updateCircles(MapObjectUpdates<MKCircle> updates) => _enqueue(
-    () => _host.updateCircles(
+  Future<void> syncPolygons(Set<MKPolygon> target) => _sync(
+    _polygons,
+    target,
+    (updates) => _host.updatePolygons(
+      updates.toAdd.map((p) => p.toPlatform()).toList(),
+      updates.toChange.map((p) => p.toPlatform()).toList(),
+      updates.idsToRemove.toList(),
+    ),
+  );
+
+  Future<void> syncCircles(Set<MKCircle> target) => _sync(
+    _circles,
+    target,
+    (updates) => _host.updateCircles(
       updates.toAdd.map((c) => c.toPlatform()).toList(),
       updates.toChange.map((c) => c.toPlatform()).toList(),
       updates.idsToRemove.toList(),
@@ -367,78 +502,134 @@ final class MKMapViewControllerImpl implements MKMapViewController {
   }
 }
 
+typedef _InitialState = ({
+  PlatformMapCamera? camera,
+  PlatformMapConfiguration configuration,
+});
+
+/// One kind of map object: the set last queued for native, which a rebuild
+/// compares against, and the set native accepted, which a diff starts from.
+final class _ObjectSync<T extends Object>(final String Function(T) idOf) {
+  Set<T> queued = const {};
+  Set<T> accepted = const {};
+}
+
 /// Adapts the generated [MapKitFlutterApi] onto the widget's
 /// [MKMapViewEventSink], converting `Platform*` payloads back to the public
 /// model types.
+///
+/// Generated handlers turn a throw into an error reply, which only reaches the
+/// native sender, so every path reports it here instead. Payload conversion
+/// runs inside the guard too: it validates.
 final class _MKMapViewFlutterApi(final MKMapViewEventSink _sink)
     implements MapKitFlutterApi {
+  void _deliver(String event, void Function() call) {
+    try {
+      call();
+    } on Object catch (exception, stack) {
+      FlutterError.reportError(
+        FlutterErrorDetails(
+          exception: exception,
+          stack: stack,
+          library: 'mapkit_flutter',
+          context: ErrorDescription('while delivering $event'),
+        ),
+      );
+    }
+  }
+
   @override
-  void onCameraMoveStarted() => _sink.onCameraMoveStarted();
+  void onCameraMoveStarted() =>
+      _deliver('onCameraMoveStarted', _sink.onCameraMoveStarted);
 
   @override
   void onCameraMove(PlatformMapCamera camera) =>
-      _sink.onCameraMove(.fromPlatform(camera));
+      _deliver('onCameraMove', () => _sink.onCameraMove(.fromPlatform(camera)));
 
   @override
-  void onCameraIdle() => _sink.onCameraIdle();
+  void onCameraIdle() => _deliver('onCameraIdle', _sink.onCameraIdle);
 
   @override
-  void onUserTrackingModeChanged(PlatformUserTrackingMode mode) =>
-      _sink.onUserTrackingModeChanged(mode);
+  void onUserTrackingModeChanged(PlatformUserTrackingMode mode) => _deliver(
+    'onUserTrackingModeChanged',
+    () => _sink.onUserTrackingModeChanged(mode),
+  );
 
   @override
-  void onAnnotationSelect(String annotationId) =>
-      _sink.onAnnotationSelect(.new(annotationId));
+  void onAnnotationSelect(String annotationId) => _deliver(
+    'onAnnotationSelect',
+    () => _sink.onAnnotationSelect(.new(annotationId)),
+  );
 
   @override
-  void onAnnotationDeselect(String annotationId) =>
-      _sink.onAnnotationDeselect(.new(annotationId));
+  void onAnnotationDeselect(String annotationId) => _deliver(
+    'onAnnotationDeselect',
+    () => _sink.onAnnotationDeselect(.new(annotationId)),
+  );
 
   @override
-  void onMapFeatureSelected(PlatformMapFeature feature) =>
-      _sink.onMapFeatureSelected(.fromPlatform(feature));
+  void onMapFeatureSelected(PlatformMapFeature feature) => _deliver(
+    'onMapFeatureSelected',
+    () => _sink.onMapFeatureSelected(.fromPlatform(feature)),
+  );
 
   @override
   void onAnnotationDragStart(
     String annotationId,
     PlatformCoordinate coordinate,
-  ) => _sink.onAnnotationDragStart(
-    .new(annotationId),
-    .fromPlatform(coordinate),
+  ) => _deliver(
+    'onAnnotationDragStart',
+    () => _sink.onAnnotationDragStart(
+      .new(annotationId),
+      .fromPlatform(coordinate),
+    ),
   );
 
   @override
   void onAnnotationDragEnd(
     String annotationId,
     PlatformCoordinate coordinate,
-  ) => _sink.onAnnotationDragEnd(.new(annotationId), .fromPlatform(coordinate));
+  ) => _deliver(
+    'onAnnotationDragEnd',
+    () => _sink.onAnnotationDragEnd(
+      .new(annotationId),
+      .fromPlatform(coordinate),
+    ),
+  );
 
   @override
   void onCalloutTap(String annotationId) =>
-      _sink.onCalloutTap(.new(annotationId));
+      _deliver('onCalloutTap', () => _sink.onCalloutTap(.new(annotationId)));
 
   @override
   void onPolylineTap(String polylineId) =>
-      _sink.onPolylineTap(.new(polylineId));
+      _deliver('onPolylineTap', () => _sink.onPolylineTap(.new(polylineId)));
 
   @override
-  void onPolygonTap(String polygonId) => _sink.onPolygonTap(.new(polygonId));
+  void onPolygonTap(String polygonId) =>
+      _deliver('onPolygonTap', () => _sink.onPolygonTap(.new(polygonId)));
 
   @override
-  void onCircleTap(String circleId) => _sink.onCircleTap(.new(circleId));
+  void onCircleTap(String circleId) =>
+      _deliver('onCircleTap', () => _sink.onCircleTap(.new(circleId)));
 
   @override
   void onMapTap(PlatformCoordinate coordinate) =>
-      _sink.onMapTap(.fromPlatform(coordinate));
+      _deliver('onMapTap', () => _sink.onMapTap(.fromPlatform(coordinate)));
 
   @override
-  void onMapLongPress(PlatformCoordinate coordinate) =>
-      _sink.onMapLongPress(.fromPlatform(coordinate));
+  void onMapLongPress(PlatformCoordinate coordinate) => _deliver(
+    'onMapLongPress',
+    () => _sink.onMapLongPress(.fromPlatform(coordinate)),
+  );
 
   @override
-  void onDidFailLoadingMap(String error) => _sink.onDidFailLoadingMap(error);
+  void onDidFailLoadingMap(String error) =>
+      _deliver('onDidFailLoadingMap', () => _sink.onDidFailLoadingMap(error));
 
   @override
-  void onDidFailToLocateUser(String error) =>
-      _sink.onDidFailToLocateUser(error);
+  void onDidFailToLocateUser(String error) => _deliver(
+    'onDidFailToLocateUser',
+    () => _sink.onDidFailToLocateUser(error),
+  );
 }

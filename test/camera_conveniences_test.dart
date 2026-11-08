@@ -129,6 +129,31 @@ void main() {
       check(region.span.longitudeDelta).equals(0.005);
     });
 
+    test('spans that overflow what MapKit can show throw', () async {
+      final harness = buildHarness();
+      await check(
+        harness.controller.fitCoordinates([
+          .new(latitude: -40, longitude: -80),
+          .new(latitude: 40, longitude: 80),
+        ], padding: 2),
+      ).throws<ArgumentError>();
+      await check(
+        harness.controller.fitCoordinates([applePark], minimumSpan: 200),
+      ).throws<ArgumentError>();
+      harness.expectCalls([]);
+    });
+
+    test('a span of exactly the limit is still accepted', () async {
+      final harness = buildHarness();
+      await harness.controller.fitCoordinates([
+        .new(latitude: -45, longitude: -90),
+        .new(latitude: 45, longitude: 90),
+      ], padding: 0.5);
+      final (region, _) = harness.expectSetRegion();
+      check(region.span.latitudeDelta).equals(180);
+      check(region.span.longitudeDelta).equals(360);
+    });
+
     group('misuse fails loudly', () {
       test('fitCoordinates with no coordinates throws', () async {
         final harness = buildHarness();

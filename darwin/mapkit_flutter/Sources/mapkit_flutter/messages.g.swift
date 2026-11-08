@@ -1346,7 +1346,9 @@ struct PlatformSnapshotOptions: Hashable, CustomStringConvertible {
 
 /// Generated class from Pigeon that represents data sent in messages.
 struct PlatformMapViewCreationParams: Hashable, CustomStringConvertible {
-  var initialCamera: PlatformMapCamera
+  /// Null keeps the map's camera: a retry of a rejected `initialize` must not
+  /// undo a camera move native accepted in between.
+  var initialCamera: PlatformMapCamera? = nil
   var configuration: PlatformMapConfiguration
   var annotations: [PlatformAnnotation]
   var polylines: [PlatformPolyline]
@@ -1356,7 +1358,7 @@ struct PlatformMapViewCreationParams: Hashable, CustomStringConvertible {
 
   // swift-format-ignore: AlwaysUseLowerCamelCase
   static func fromList(_ pigeonVar_list: [Any?]) -> PlatformMapViewCreationParams? {
-    let initialCamera = pigeonVar_list[0] as! PlatformMapCamera
+    let initialCamera: PlatformMapCamera? = nilOrValue(pigeonVar_list[0])
     let configuration = pigeonVar_list[1] as! PlatformMapConfiguration
     let annotations = pigeonVar_list[2] as! [PlatformAnnotation]
     let polylines = pigeonVar_list[3] as! [PlatformPolyline]

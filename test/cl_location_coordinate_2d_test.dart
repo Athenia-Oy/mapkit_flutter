@@ -42,11 +42,7 @@ void main() {
     });
 
     test('rejects non-finite coordinates', () {
-      for (final bad in [
-        double.nan,
-        double.infinity,
-        double.negativeInfinity,
-      ]) {
+      for (final bad in <double>[.nan, .infinity, .negativeInfinity]) {
         check(() => CLLocationCoordinate2D(latitude: bad, longitude: 0))
             .throws<ArgumentError>();
         check(() => CLLocationCoordinate2D(latitude: 0, longitude: bad))

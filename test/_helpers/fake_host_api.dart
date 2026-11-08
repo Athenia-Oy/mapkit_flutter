@@ -31,6 +31,9 @@ final class FakeHostApi extends MapKitHostApi {
   bool lookAroundResult = false;
   Object? errorToThrow;
 
+  /// Holds [takeSnapshot] in flight, keeping the controller's queue busy.
+  Future<void>? snapshotGate;
+
   void _record(String name, Object? args) {
     final e = errorToThrow;
     if (e case final error?) {
@@ -138,6 +141,7 @@ final class FakeHostApi extends MapKitHostApi {
 
   @override
   Future<Uint8List> takeSnapshot(PlatformSnapshotOptions options) async {
+    await snapshotGate;
     _record('takeSnapshot', options);
     return .new(0);
   }

@@ -1,4 +1,4 @@
-import 'package:flutter/foundation.dart' show TargetPlatform;
+import 'package:flutter/foundation.dart' show TargetPlatform, kIsWeb;
 import 'package:flutter/services.dart' show PlatformException;
 import 'package:meta/meta.dart';
 
@@ -45,10 +45,10 @@ final class MapKitDisposedException extends MapKitException {
 }
 
 /// Thrown when an `MKMapView` is built on a non-Apple platform (anything other
-/// than iOS or macOS), or when it is configured with an iOS-only [feature] on
-/// macOS. `mapkit_flutter` wraps Apple's MapKit, so there is no fallback —
-/// this surfaces loudly instead of silently rendering an empty box or
-/// ignoring the setting.
+/// than iOS or macOS, including the web on an Apple device), or when it is
+/// configured with an iOS-only [feature] on macOS. `mapkit_flutter` wraps
+/// Apple's MapKit, so there is no fallback — this surfaces loudly instead of
+/// silently rendering an empty box or ignoring the setting.
 final class const MapKitUnsupportedPlatformException(
   /// The platform the widget was built on.
   final TargetPlatform platform, {
@@ -72,7 +72,7 @@ final class const MapKitUnsupportedPlatformException(
     null =>
       'MapKitUnsupportedPlatformException: '
           'mapkit_flutter supports iOS and macOS only and '
-          'cannot render on $platform.',
+          'cannot render on ${kIsWeb ? 'the web' : platform}.',
     final feature =>
       'MapKitUnsupportedPlatformException: $feature is iOS only and has no '
           'effect on $platform.',

@@ -35,3 +35,21 @@ PlatformMapCamera platformCamera({
 );
 
 PlatformPoint platformPoint(double x, double y) => .new(x: x, y: y);
+
+PlatformMapConfiguration platformConfiguration() => .new(
+  kind: .standard,
+  emphasisStyle: .standard,
+  elevationStyle: .flat,
+  showsTraffic: false,
+  showsCompass: true,
+  showsScale: false,
+  showsUserLocation: false,
+  showsUserTrackingButton: false,
+  userTrackingMode: .none,
+  insetsLayoutMarginsFromSafeArea: true,
+  isRotateEnabled: true,
+  isScrollEnabled: true,
+  isZoomEnabled: true,
+  isPitchEnabled: true,
+  selectableMapFeatures: const [],
+);

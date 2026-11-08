@@ -52,7 +52,7 @@ void main() {
     });
 
     test('rejects an imagePixelRatio that is not finite and > 0', () {
-      for (final bad in [0.0, -1.0, double.nan, double.infinity]) {
+      for (final bad in <double>[0, -1, .nan, .infinity]) {
         check(
           because: 'imagePixelRatio $bad',
           () => MKAnnotationIcon.image(.fromList([1]), imagePixelRatio: bad),

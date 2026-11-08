@@ -39,4 +39,6 @@ final class MapObjectUpdates<T extends Object> {
   final Set<T> toAdd;
   final Set<T> toChange;
   final Set<String> idsToRemove;
+
+  bool isEmpty() => toAdd.isEmpty && toChange.isEmpty && idsToRemove.isEmpty;
 }

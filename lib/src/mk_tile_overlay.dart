@@ -36,7 +36,8 @@ final class MKTileOverlay({
   /// When `true`, the overlay replaces the base map underneath it
   /// (`MKTileOverlay.canReplaceMapContent`). Use for opaque world-coverage
   /// providers like a styled basemap; leave `false` for transparent
-  /// supplemental layers.
+  /// supplemental layers. A snapshot leaves out the base map too, and is
+  /// transparent wherever no tile covers it.
   final bool canReplaceMapContent = false,
 
   /// Renderer opacity (`MKTileOverlayRenderer.alpha`). Default 1.0.

@@ -37,7 +37,7 @@ void main() {
     });
 
     test('rejects negative or non-finite lineWidth', () {
-      for (final bad in [-1.0, double.nan, double.infinity]) {
+      for (final bad in <double>[-1, .nan, .infinity]) {
         check(
           () => MKPolygon(
             id: const .new('bad'),

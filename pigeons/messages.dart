@@ -13,7 +13,11 @@
 // the plugin module. Keep the prefix for any future addition.
 //
 // Error-code contract (host -> MapKitPlatformException at the controller):
-//   snapshot-failed       — `takeSnapshot` could not produce image data.
+//   snapshot-failed       — `takeSnapshot` could not produce image data; a tile
+//                           overlay's tile failed to load or decode or missed
+//                           the 60-second deadline; the view needs more than
+//                           1024 tiles or can't project a tile; or the map
+//                           was disposed mid-snapshot.
 //   look-around-failed    — the Look Around scene request or presentation
 //                           failed (a missing scene is `false`, not an error).
 //   unsupported-platform  — the feature does not exist on this platform
@@ -24,8 +28,9 @@
 //                           running OS.
 //   invalid-argument      — a value MapKit rejects (zoom range, boundary).
 // Unknown ids are reported, not ignored: select/deselect/remove return
-// whether they found the object. Reads that need a layout return null
-// before the first layout.
+// whether they found the object, and an update's `toChange` adds an object
+// native doesn't have. Reads that need a layout return null before the first
+// layout.
 
 // Pigeon parses this file with its own bundled analyzer, which does not
 // support Dart 3.13 primary-constructor syntax. Keep the class name on
@@ -552,7 +557,9 @@ class PlatformMapViewCreationParams {
     required this.circles,
   });
 
-  final PlatformMapCamera initialCamera;
+  /// Null keeps the map's camera: a retry of a rejected `initialize` must not
+  /// undo a camera move native accepted in between.
+  final PlatformMapCamera? initialCamera;
   final PlatformMapConfiguration configuration;
   final List<PlatformAnnotation> annotations;
   final List<PlatformPolyline> polylines;

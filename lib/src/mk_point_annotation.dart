@@ -29,8 +29,9 @@ final class MKPointAnnotation({
   /// Visual appearance of the annotation view.
   final MKAnnotationIcon icon = const .marker(),
 
-  /// Callout title (`MKAnnotation.title`). A non-null title enables the
-  /// callout bubble on tap.
+  /// Title (`MKAnnotation.title`). A system marker draws it as a label under
+  /// the pin, and shows a callout bubble only with a [subtitle] or
+  /// [calloutConsumesTapEvents]; an image icon always shows it in a bubble.
   final String? title,
 
   /// Callout subtitle (`MKAnnotation.subtitle`).
@@ -46,7 +47,8 @@ final class MKPointAnnotation({
   final Offset anchorPoint = const .new(0.5, 1),
 
   /// Whether the user can drag the annotation
-  /// (`MKAnnotationView.isDraggable`).
+  /// (`MKAnnotationView.isDraggable`). [onDragStart] and [onDragEnd] require
+  /// it.
   final bool isDraggable = false,
 
   /// Whether the annotation view is hidden on the map.
@@ -68,14 +70,17 @@ final class MKPointAnnotation({
   /// MapKit's default callout.
   final bool calloutConsumesTapEvents = false,
 
-  /// Called when the callout bubble is tapped; requires
-  /// [calloutConsumesTapEvents]. iOS only.
+  /// Called when the callout bubble is tapped, not the pin under it; requires
+  /// [calloutConsumesTapEvents] and a [title] or [subtitle], without which
+  /// MapKit shows no callout. iOS only.
   final VoidCallback? onCalloutTap,
 
-  /// Called with the starting coordinate when a drag begins.
+  /// Called with the starting coordinate when a drag begins; requires
+  /// [isDraggable].
   final ValueChanged<CLLocationCoordinate2D>? onDragStart,
 
-  /// Called with the final coordinate when a drag ends.
+  /// Called with the final coordinate when a drag ends; requires
+  /// [isDraggable].
   final ValueChanged<CLLocationCoordinate2D>? onDragEnd,
 
   /// `mapView(_:didSelect:)` — the user tapped the annotation, or
@@ -88,8 +93,9 @@ final class MKPointAnnotation({
   /// Creates a point annotation at [coordinate].
   ///
   /// Throws [ArgumentError] when [alpha] is outside `[0, 1]`, when
-  /// [anchorPoint] or [zPriority] is not finite, or when [onCalloutTap] is set
-  /// without [calloutConsumesTapEvents] (it would never fire).
+  /// [anchorPoint] or [zPriority] is not finite, or when a callback could never
+  /// fire: [onDragStart] or [onDragEnd] without [isDraggable], [onCalloutTap]
+  /// without [calloutConsumesTapEvents] or without callout text.
   this {
     checkInRange(alpha, 0, 1, 'alpha');
     if (!anchorPoint.isFinite) {
@@ -101,6 +107,27 @@ final class MKPointAnnotation({
         onCalloutTap,
         'onCalloutTap',
         'requires calloutConsumesTapEvents: true',
+      );
+    }
+    if (onCalloutTap != null && title == null && subtitle == null) {
+      throw ArgumentError.value(
+        onCalloutTap,
+        'onCalloutTap',
+        'requires a title or subtitle: without text MapKit shows no callout',
+      );
+    }
+    if (onDragStart != null && !isDraggable) {
+      throw ArgumentError.value(
+        onDragStart,
+        'onDragStart',
+        'requires isDraggable: true',
+      );
+    }
+    if (onDragEnd != null && !isDraggable) {
+      throw ArgumentError.value(
+        onDragEnd,
+        'onDragEnd',
+        'requires isDraggable: true',
       );
     }
   }
