@@ -5,37 +5,25 @@
 library;
 
 import 'package:checks/checks.dart';
-import 'package:flutter/foundation.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mapkit_flutter/mapkit_flutter.dart';
 
 import '_helpers/fixtures.dart';
 
 void main() {
-  for (final platform in <TargetPlatform>[.iOS, .macOS]) {
-    testWidgets('a $platform browser gets the unsupported exception', (
-      tester,
-    ) async {
-      debugDefaultTargetPlatformOverride = platform;
-      addTearDown(() => debugDefaultTargetPlatformOverride = null);
+  testWidgets('a browser gets the unsupported exception', (tester) async {
+    await tester.pumpWidget(MKMapView(initialCamera: sampleCamera));
+    final exception = tester.takeException();
 
-      await tester.pumpWidget(MKMapView(initialCamera: sampleCamera));
-      final exception = tester.takeException();
-      debugDefaultTargetPlatformOverride = null;
-
-      check(exception)
-          .isA<MapKitUnsupportedPlatformException>()
-          .has((e) => e.toString(), 'toString')
-          .contains('the web');
-    });
-  }
+    check(exception)
+        .isA<MapKitUnsupportedPlatformException>()
+        .has((e) => e.toString(), 'toString')
+        .contains('the web');
+  }, variant: const TargetPlatformVariant({.iOS, .macOS}));
 
   testWidgets('a macOS browser does not report iOS-only settings', (
     tester,
   ) async {
-    debugDefaultTargetPlatformOverride = .macOS;
-    addTearDown(() => debugDefaultTargetPlatformOverride = null);
-
     await tester.pumpWidget(
       MKMapView(
         initialCamera: sampleCamera,
@@ -43,11 +31,10 @@ void main() {
       ),
     );
     final exception = tester.takeException();
-    debugDefaultTargetPlatformOverride = null;
 
     check(exception)
         .isA<MapKitUnsupportedPlatformException>()
         .has((e) => e.feature, 'feature')
         .isNull();
-  });
+  }, variant: TargetPlatformVariant.only(.macOS));
 }
