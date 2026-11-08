@@ -21,7 +21,7 @@ setting) when used on macOS.
 
 - `MKMapView` is a declarative StatefulWidget: content is
   `Set<MKPointAnnotation>` / `Set<MKPolyline>` / … params, diffed on rebuild
-  against what the map last received (a new set per build and an in-place
+  against what the map last accepted (a new set per build and an in-place
   mutation + `setState` both work). Same id + changed fields → update; removed
   from set → removed from map.
 - No view/renderer objects: presentation props are merged onto the models —
