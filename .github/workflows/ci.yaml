@@ -92,6 +92,8 @@ jobs:
           cache: true
       - run: flutter pub get
       - run: flutter test
+      - name: Web guard, in a real browser (kIsWeb is const)
+        run: flutter test --platform chrome test/mk_map_view_web_test.dart
   downgrade:
     runs-on: ubuntu-latest
     timeout-minutes: 20
@@ -153,22 +155,50 @@ jobs:
           flutter build ios --release --no-codesign
           flutter build macos --debug
           xcodebuild test -workspace macos/Runner.xcworkspace -scheme Runner -destination 'platform=macOS' -quiet SWIFT_TREAT_WARNINGS_AS_ERRORS=YES
-      # A macOS integration run can hang after "Failed to foreground app": bound each file, retry once,
-      # and accept a green on-device result whose host teardown failed.
+      # Run all macOS integration tests in a single app launch, and exit cleanly
+      # if the host hangs at teardown after "All tests passed!".
       - name: macOS integration
         working-directory: example
-        timeout-minutes: 25
+        timeout-minutes: 15
         run: |
           set -o pipefail
-          for t in integration_test/*_test.dart; do
-            for attempt in 1 2; do
-              out=$(mktemp); rc=0
-              perl -e 'alarm shift; exec @ARGV' 420 flutter test "$t" -d macos 2>&1 | tee "$out" || rc=$?
-              [ "$rc" -eq 0 ] && break
-              grep -q 'All tests passed' "$out" && { echo "::warning::$t passed; teardown rc=$rc"; break; }
-              pkill -f mapkit_flutter_example || true
-              [ "$attempt" -eq 2 ] && { echo "::error::$t failed twice"; exit 1; }
+          bundle=integration_test/_all_test.dart
+          trap 'rm -f "$bundle"' EXIT
+          {
+            echo "import 'package:flutter_test/flutter_test.dart';"
+            echo "import 'package:integration_test/integration_test.dart';"
+            i=0
+            for t in integration_test/*_test.dart; do
+              [ "$t" = "$bundle" ] && continue
+              echo "import '${t#integration_test/}' as t$i;"
+              i=$((i+1))
             done
+            echo "void main() {"
+            echo "  IntegrationTestWidgetsFlutterBinding.ensureInitialized();"
+            i=0
+            for t in integration_test/*_test.dart; do
+              [ "$t" = "$bundle" ] && continue
+              echo "  group('${t#integration_test/}', t$i.main);"
+              i=$((i+1))
+            done
+            echo "}"
+          } > "$bundle"
+          for attempt in 1 2; do
+            out=$(mktemp); rc=0
+            (
+              perl -e 'alarm shift; exec @ARGV' 300 flutter test -r expanded "$bundle" -d macos 2>&1 | while IFS= read -r line; do
+                printf '%s\n' "$line"
+                case "$line" in
+                  *"All tests passed!"*)
+                    ( sleep 2; pkill -f mapkit_flutter_example 2>/dev/null || true ) &
+                    ;;
+                esac
+              done
+            ) | tee "$out" || rc=$?
+            [ "$rc" -eq 0 ] && break
+            grep -q 'All tests passed' "$out" && { echo "::warning::integration bundle passed; teardown rc=$rc"; break; }
+            pkill -f mapkit_flutter_example || true
+            [ "$attempt" -eq 2 ] && { echo "::error::integration bundle failed twice"; exit 1; }
           done
   cocoapods-probe:
     runs-on: macos-15
