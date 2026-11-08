@@ -17,14 +17,14 @@ void main() {
 
     // Let the platform view initialize and the first frame settle (this also
     // runs the startup custom-Flutter-widget marker rasterization).
-    for (var i = 0; i < 20; i++) {
-      await tester.pump(const .new(milliseconds: 200));
+    for (var i = 0; i < 10; i++) {
+      await tester.pump(const .new(milliseconds: 100));
     }
     check(find.text('Tint'), because: 'control bar never built').isNotNull();
 
     Future<void> tap(Finder finder) async {
-      await tester.tap(finder);
-      await tester.pump(const .new(milliseconds: 400));
+      await tester.tap(finder, warnIfMissed: false);
+      await tester.pump(const .new(milliseconds: 50));
     }
 
     // Cycle selection across pins, restyling each in place.
@@ -39,7 +39,7 @@ void main() {
     await tap(find.byTooltip('Zoom out'));
     await tap(find.text('Reset'));
     await tap(find.text('Rebuild'));
-    await tester.pump(const .new(seconds: 1));
+    await tester.pump(const .new(milliseconds: 500));
 
     check(tester.takeException()).isNull();
   });

@@ -45,7 +45,7 @@ final class FlutterCircle: MKCircle, FlutterOverlay, @unchecked Sendable {
         }
         let centerPoint = snapshot.point(for: coordinate)
         let offsetPoint = snapshot.point(for: coordinate.offsetLatitude(byMeters: radius))
-        let radiusInPoints = abs(centerPoint.y - offsetPoint.y)
+        let radiusInPoints = hypot(centerPoint.x - offsetPoint.x, centerPoint.y - offsetPoint.y)
 
         let circlePath = CGMutablePath()
         circlePath.addArc(center: centerPoint, radius: radiusInPoints, startAngle: 0, endAngle: .pi * 2, clockwise: true)

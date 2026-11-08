@@ -30,6 +30,7 @@ public class MapKitViewHost: NSObject, @preconcurrency MapKitHostApi {
     var polylinesById: [String: any FlutterOverlay] = [:]
     var polygonsById: [String: any FlutterOverlay] = [:]
     var circlesById: [String: any FlutterOverlay] = [:]
+    private var isDisposed = false
 
     public convenience init(withFrame frame: CGRect, withRegistrar registrar: FlutterPluginRegistrar, withId id: Int64) {
         #if os(iOS)
@@ -56,7 +57,15 @@ public class MapKitViewHost: NSObject, @preconcurrency MapKitHostApi {
 
         self.mapView.delegate = self
         self.mapView.flutterApi = self.flutterApi
-        MapKitHostApiSetup.setUp(binaryMessenger: hostMessenger, api: self, messageChannelSuffix: suffix)
+        MapKitHostApiSetup.setUp(
+            binaryMessenger: hostMessenger, api: WeakMapKitHostApi(self), messageChannelSuffix: suffix)
+    }
+
+    /// Dart's `dispose` never comes for a view unmounted before its creation
+    /// finished. The engine then still drops the platform view, so the host
+    /// goes away with it and takes its channel handlers along.
+    deinit {
+        hostMessenger.removeAllHandlers()
     }
 
     // MARK: - MapKitHostApi
@@ -66,7 +75,9 @@ public class MapKitViewHost: NSObject, @preconcurrency MapKitHostApi {
         // map, so a throw leaves it untouched.
         let annotations = try params.annotations.map(FlutterAnnotation.init(fromPlatform:))
         try self.mapView.apply(configuration: params.configuration)
-        self.mapView.move(.camera(params.initialCamera.mkCamera), animated: false)
+        if let camera = params.initialCamera {
+            self.mapView.move(.camera(camera.mkCamera), animated: false)
+        }
         self.annotationsToAdd(annotations)
         self.applyOverlayUpdate(
             into: &self.polylinesById,
@@ -274,6 +285,7 @@ public class MapKitViewHost: NSObject, @preconcurrency MapKitHostApi {
     }
 
     func dispose() throws {
+        isDisposed = true
         hostMessenger.removeAllHandlers()
         mapView.tearDown()
         annotationsById.removeAll()
@@ -370,6 +382,23 @@ extension MapKitViewHost: MKMapViewDelegate {
 }
 
 extension MapKitViewHost {
+    /// How long a snapshot waits for its tiles, in seconds.
+    /// `MKTileOverlay.loadTile` has no bound of its own worth relying on: against
+    /// a silent or trickling server it was still quiet after 100 seconds, with
+    /// the controller's queue blocked behind it.
+    @MainActor static var tileLoadDeadline: TimeInterval = 60
+
+    /// How many times a tile's patch may split while drawing; see `TilePainter`.
+    /// Replaced by tests.
+    @MainActor static var deepestPatchSplit = 40
+
+    /// Tiles one snapshot may fetch, all overlays together. With each tile at the
+    /// zoom its on-screen size asks for, one overlay stays well under this at any
+    /// pitch; beyond it, fetching and decoding would hold the controller's queue
+    /// for minutes and gigabytes of memory. A very small `tileSize` gets here, or
+    /// about four overlays at the steepest camera in a 2560-point window.
+    nonisolated static let tileLimit = 1024
+
     /// Everything a snapshot needs from the live map, as Sendable values: the
     /// snapshotter runs off the main actor and must never see `mapView` objects.
     struct SnapshotInput: Sendable {
@@ -422,8 +451,17 @@ extension MapKitViewHost {
         return options
     }
 
+    /// `dispose` skips Dart's queue, so it can land while a snapshot awaits. It
+    /// empties the map, and compositing that would return a wrong image as success.
+    private func checkNotDisposedDuringSnapshot() throws {
+        if self.isDisposed {
+            throw mapKitError(.snapshotFailed, "The map view was disposed during the snapshot.")
+        }
+    }
+
     private func takeSnapshot(options: PlatformSnapshotOptions) async throws -> FlutterStandardTypedData? {
         let input = snapshotInput(options)
+        let viewport = tileViewport()
         guard input.size.width > 0, input.size.height > 0 else {
             throw mapKitError(.snapshotFailed, "Map view has zero size.")
         }
@@ -432,16 +470,27 @@ extension MapKitViewHost {
         let snapshotOptions = try Self.makeSnapshotOptions(input)
 
         let snapshot = try await Self.startSnapshot(input)
+        try self.checkNotDisposedDuringSnapshot()
+        let tiles = options.showsOverlays ? try await self.loadTiles(for: snapshot, in: viewport) : SnapshotTiles()
+        try self.checkNotDisposedDuringSnapshot()
 
         #if os(iOS)
+        var drawingFailure: Error?
         let image = UIGraphicsImageRenderer(size: snapshotOptions.size).image { context in
-            snapshot.image.draw(at: .zero)
+            if !tiles.replacesBaseMap {
+                snapshot.image.draw(at: .zero)
+            }
             let rect = snapshotOptions.mapRect
             // Image-space bounds: `snapshot.point(for:)` projects into this
             // space, so drawn frames are tested here rather than in map space.
             let bounds = CGRect(origin: .zero, size: snapshotOptions.size)
             if options.showsOverlays {
-                self.drawOverlays(snapshot: snapshot, mapRect: rect, in: context.cgContext)
+                do {
+                    try self.drawOverlays(snapshot: snapshot, mapRect: rect, tiles: tiles, in: context.cgContext)
+                } catch {
+                    drawingFailure = error
+                    return
+                }
             }
             if options.showsAnnotations {
                 for annotation in self.mapView.getMapViewAnnotations() where !annotation.isHidden {
@@ -449,11 +498,12 @@ extension MapKitViewHost {
                 }
             }
         }
+        if let drawingFailure { throw drawingFailure }
         guard let imageData = image.pngRepresentation else {
             return nil
         }
         #elseif os(macOS)
-        guard let imageData = self.composite(snapshot, options: options, snapshotOptions: snapshotOptions) else {
+        guard let imageData = try self.composite(snapshot, options: options, snapshotOptions: snapshotOptions, tiles: tiles) else {
             return nil
         }
         #endif
@@ -468,8 +518,9 @@ extension MapKitViewHost {
     private func composite(
         _ snapshot: MKMapSnapshotter.Snapshot,
         options: PlatformSnapshotOptions,
-        snapshotOptions: MKMapSnapshotter.Options
-    ) -> Data? {
+        snapshotOptions: MKMapSnapshotter.Options,
+        tiles: SnapshotTiles
+    ) throws -> Data? {
         let size = snapshotOptions.size
         guard let base = snapshot.image.cgImage(forProposedRect: nil, context: nil, hints: nil),
               let space = CGColorSpace(name: CGColorSpace.sRGB),
@@ -479,19 +530,22 @@ extension MapKitViewHost {
         else {
             return nil
         }
-        context.draw(base, in: CGRect(x: 0, y: 0, width: base.width, height: base.height))
+        if !tiles.replacesBaseMap {
+            context.draw(base, in: CGRect(x: 0, y: 0, width: base.width, height: base.height))
+        }
         let scale = CGFloat(base.width) / size.width
         context.translateBy(x: 0, y: CGFloat(base.height))
         context.scaleBy(x: scale, y: -scale)
 
         NSGraphicsContext.saveGraphicsState()
+        defer { NSGraphicsContext.restoreGraphicsState() }
         NSGraphicsContext.current = NSGraphicsContext(cgContext: context, flipped: true)
         let bounds = CGRect(origin: .zero, size: size)
         if options.showsOverlays {
             context.saveGState()
             context.translateBy(x: 0, y: size.height)
             context.scaleBy(x: 1, y: -1)
-            self.drawOverlays(snapshot: snapshot, mapRect: snapshotOptions.mapRect, in: context)
+            try self.drawOverlays(snapshot: snapshot, mapRect: snapshotOptions.mapRect, tiles: tiles, in: context)
             context.restoreGState()
         }
         if options.showsAnnotations {
@@ -500,7 +554,6 @@ extension MapKitViewHost {
                 self.drawAnnotations(annotation: annotation, point: CGPoint(x: point.x, y: size.height - point.y), bounds: bounds)
             }
         }
-        NSGraphicsContext.restoreGraphicsState()
 
         guard let composed = context.makeImage() else {
             return nil
@@ -563,12 +616,133 @@ extension MapKitViewHost {
         }
     }
 
-    private func drawOverlays(snapshot: MKMapSnapshotter.Snapshot, mapRect: MKMapRect, in context: CGContext) {
-        for overlay in self.mapView.overlays where overlay.intersects?(mapRect) ?? overlay.boundingMapRect.intersects(mapRect) {
-            if let flutterOverlay = overlay as? any FlutterOverlay {
+    /// Draws in the map's own stacking order: levels bottom to top, each level
+    /// bottom to top.
+    private func drawOverlays(
+        snapshot: MKMapSnapshotter.Snapshot, mapRect: MKMapRect, tiles: SnapshotTiles, in context: CGContext
+    ) throws {
+        for overlay in self.mapView.overlays(in: .aboveRoads) + self.mapView.overlays(in: .aboveLabels) {
+            if let tileOverlay = overlay as? FlutterTileOverlay {
+                try tileOverlay.draw(tiles, of: snapshot, in: context, deepestSplit: Self.deepestPatchSplit)
+            } else if let flutterOverlay = overlay as? any FlutterOverlay,
+                      overlay.intersects?(mapRect) ?? overlay.boundingMapRect.intersects(mapRect) {
                 flutterOverlay.drawSnapshot(snapshot, in: context)
             }
         }
+    }
+
+    /// The live map's view for tile overlays. Captured beside `snapshotInput`:
+    /// the snapshot shows the view of that moment, whatever the camera does next.
+    struct TileViewport: Sendable {
+        /// `ground`'s bounding rect, and at least the map's `visibleMapRect`.
+        let coverage: MKMapRect
+        let center: CLLocationCoordinate2D
+        /// The convex patch of map the view shows, on the center's copy of the
+        /// world.
+        let ground: [MKMapPoint]
+    }
+
+    func tileViewport() -> TileViewport {
+        let center = self.mapView.centerCoordinate
+        let centerPoint = MKMapPoint(center)
+        let world = MKMapSize.world.width
+        var visible = self.mapView.visibleMapRect
+        visible.origin.x += ((centerPoint.x - visible.midX) / world).rounded() * world
+        let bounds = self.mapView.bounds
+        guard let left = self.groundEdge(x: bounds.minX, around: centerPoint),
+              let right = self.groundEdge(x: bounds.maxX, around: centerPoint) else {
+            let ground = [
+                MKMapPoint(x: visible.minX, y: visible.minY), MKMapPoint(x: visible.maxX, y: visible.minY),
+                MKMapPoint(x: visible.maxX, y: visible.maxY), MKMapPoint(x: visible.minX, y: visible.maxY),
+            ]
+            return TileViewport(coverage: visible, center: center, ground: ground)
+        }
+        let ground = [left.near, left.far, right.far, right.near]
+        var coverage = visible
+        for point in ground {
+            coverage = coverage.union(MKMapRect(origin: point, size: MKMapSize(width: 0, height: 0)))
+        }
+        return TileViewport(coverage: coverage, center: center, ground: ground)
+    }
+
+    /// The ground a vertical edge of the view shows, or nil when neither of its
+    /// ends is ground. Past the horizon `convert` answers with a pole; just short
+    /// of it the ground runs off at great speed. A quarter of the world from the
+    /// center, what's left is well under a point of the view, so that is where
+    /// the ground ends.
+    private func groundEdge(x: CGFloat, around center: MKMapPoint) -> (near: MKMapPoint, far: MKMapPoint)? {
+        let world = MKMapSize.world.width
+        func ground(at y: CGFloat) -> MKMapPoint? {
+            let coordinate = self.mapView.convert(CGPoint(x: x, y: y), toCoordinateFrom: self.mapView)
+            guard CLLocationCoordinate2DIsValid(coordinate) else { return nil }
+            var mapPoint = Self.straightMapPoint(coordinate)
+            mapPoint.x += ((center.x - mapPoint.x) / world).rounded() * world
+            return max(abs(mapPoint.x - center.x), abs(mapPoint.y - center.y)) <= world / 4 ? mapPoint : nil
+        }
+        let bounds = self.mapView.bounds
+        switch (ground(at: bounds.minY), ground(at: bounds.maxY)) {
+        case (let top?, let bottom?):
+            return (near: bottom, far: top)
+        case (nil, nil):
+            return nil
+        case (let top, let bottom):
+            var onGround = top == nil ? bounds.maxY : bounds.minY
+            var pastIt = top == nil ? bounds.minY : bounds.maxY
+            var far = top ?? bottom
+            for _ in 0..<16 {
+                let middle = (onGround + pastIt) / 2
+                if let point = ground(at: middle) {
+                    onGround = middle
+                    far = point
+                } else {
+                    pastIt = middle
+                }
+            }
+            guard let near = top ?? bottom, let far else { return nil }
+            return (near: near, far: far)
+        }
+    }
+
+    /// `MKMapPoint` clamps latitude at the Mercator world's edge, about 85.05°,
+    /// and keeps the longitude, which bends the view's straight edge off its line
+    /// wherever it runs past that. `convert` keeps going, so this does too.
+    static func straightMapPoint(_ coordinate: CLLocationCoordinate2D) -> MKMapPoint {
+        let sine = sin(coordinate.latitude * .pi / 180)
+        let world = MKMapSize.world.height
+        return MKMapPoint(
+            x: MKMapPoint(coordinate).x,
+            y: (0.5 - log((1 + sine) / (1 - sine)) / (4 * .pi)) * world)
+    }
+
+    /// Fetches every tile the snapshot needs through each overlay's own
+    /// `loadTile`, before compositing: its drawing closure is synchronous.
+    private func loadTiles(
+        for snapshot: MKMapSnapshotter.Snapshot, in viewport: TileViewport
+    ) async throws -> SnapshotTiles {
+        let overlays = self.tileOverlays.values
+        guard !overlays.isEmpty else { return SnapshotTiles() }
+        let contentScale = Self.contentScale(of: snapshot)
+        var requests: [TileRequest] = []
+        for overlay in overlays {
+            requests += try overlay.tileRequests(
+                in: viewport, contentScale: contentScale, limit: Self.tileLimit - requests.count
+            ) { snapshot.point(for: $0.coordinate) }
+        }
+        return try SnapshotTiles(
+            requests: requests,
+            data: try await TileRequest.load(requests, deadline: Self.tileLoadDeadline),
+            viewport: viewport,
+            replacesBaseMap: overlays.contains { $0.canReplaceMapContent })
+    }
+
+    private static func contentScale(of snapshot: MKMapSnapshotter.Snapshot) -> CGFloat {
+        #if os(iOS)
+        return snapshot.image.scale
+        #elseif os(macOS)
+        guard let image = snapshot.image.cgImage(forProposedRect: nil, context: nil, hints: nil),
+              snapshot.image.size.width > 0 else { return 1 }
+        return CGFloat(image.width) / snapshot.image.size.width
+        #endif
     }
 }
 
