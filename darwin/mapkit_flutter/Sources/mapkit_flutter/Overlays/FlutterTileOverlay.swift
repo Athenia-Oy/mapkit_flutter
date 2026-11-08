@@ -135,9 +135,11 @@ struct SnapshotTiles {
     let replacesBaseMap: Bool
     private let byOverlay: [ObjectIdentifier: [Tile]]
 
-    init() {
-        viewport = MapKitViewHost.TileViewport(
+    init(
+        viewport: MapKitViewHost.TileViewport = MapKitViewHost.TileViewport(
             coverage: .null, center: CLLocationCoordinate2D(), ground: [])
+    ) {
+        self.viewport = viewport
         replacesBaseMap = false
         byOverlay = [:]
     }

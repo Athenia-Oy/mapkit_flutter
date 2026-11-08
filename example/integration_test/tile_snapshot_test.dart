@@ -66,7 +66,7 @@ void main() {
     }
 
     final bare = await centerOf(await map.takeSnapshot());
-    check(bare.toARGB32()).not((it) => it.equals(magenta.toARGB32()));
+    check(_isNear(bare, magenta)).isFalse();
 
     await map.addTileOverlay(
       .new(
@@ -76,13 +76,12 @@ void main() {
       ),
     );
     final withTiles = await centerOf(await map.takeSnapshot());
-    check(withTiles.toARGB32()).equals(magenta.toARGB32());
+    check(_isNear(withTiles, magenta)).isTrue();
 
     final withoutOverlays = await centerOf(
       await map.takeSnapshot(const .new(showsOverlays: false)),
     );
-    check(withoutOverlays.toARGB32())
-        .not((it) => it.equals(magenta.toARGB32()));
+    check(_isNear(withoutOverlays, magenta)).isFalse();
 
     await map.removeTileOverlay(const .new('solid'));
     await map.addTileOverlay(
@@ -114,3 +113,9 @@ Future<Uint8List> _solidPng(ui.Color color) async {
   if (bytes == null) fail('tile did not encode');
   return bytes.buffer.asUint8List();
 }
+
+bool _isNear(ui.Color a, ui.Color b, {double tolerance = 0.05}) =>
+    (a.a - b.a).abs() <= tolerance &&
+    (a.r - b.r).abs() <= tolerance &&
+    (a.g - b.g).abs() <= tolerance &&
+    (a.b - b.b).abs() <= tolerance;

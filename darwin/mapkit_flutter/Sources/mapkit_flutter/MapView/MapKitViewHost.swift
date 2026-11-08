@@ -30,7 +30,7 @@ public class MapKitViewHost: NSObject, @preconcurrency MapKitHostApi {
     var polylinesById: [String: any FlutterOverlay] = [:]
     var polygonsById: [String: any FlutterOverlay] = [:]
     var circlesById: [String: any FlutterOverlay] = [:]
-    private var isDisposed = false
+    private(set) var isDisposed = false
 
     public convenience init(withFrame frame: CGRect, withRegistrar registrar: FlutterPluginRegistrar, withId id: Int64) {
         #if os(iOS)
@@ -202,10 +202,15 @@ public class MapKitViewHost: NSObject, @preconcurrency MapKitHostApi {
     func openLookAround(coordinate: PlatformCoordinate, completion: @escaping (Result<Bool, Error>) -> Void) {
         #if os(iOS)
         let coord = coordinate.clCoordinate
-        Task { @MainActor in
+        Task { @MainActor [weak self] in
+            let sceneResult = await Result { try await Self.requestLookAroundScene(at: coord) }
+            guard let self, !self.isDisposed else {
+                completion(.failure(mapKitError(.lookAroundFailed, "The map view was disposed during Look Around.")))
+                return
+            }
             let scene: MKLookAroundScene?
             do {
-                scene = try await Self.requestLookAroundScene(at: coord)
+                scene = try sceneResult.get()
             } catch {
                 completion(.failure(mapKitError(.lookAroundFailed, error.localizedDescription)))
                 return
@@ -222,7 +227,8 @@ public class MapKitViewHost: NSObject, @preconcurrency MapKitHostApi {
                 completion(.failure(mapKitError(.lookAroundFailed, "No view controller to present Look Around from.")))
                 return
             }
-            Self.present(vc, over: host, completion: completion)
+            Self.present(
+                vc, over: host, isDisposed: { [weak self = self] in self?.isDisposed ?? true }, completion: completion)
         }
         #elseif os(macOS)
         // MKLookAroundViewController exists on macOS 13+, but presenting it from the AppKit host isn't wired yet.
@@ -236,15 +242,22 @@ public class MapKitViewHost: NSObject, @preconcurrency MapKitHostApi {
     /// an accepted one links `vc` to its presenter synchronously. So a running
     /// transition is waited out first, and `completion` runs at most once.
     static func present(
-        _ vc: UIViewController, over host: UIViewController, completion: @escaping (Result<Bool, Error>) -> Void
+        _ vc: UIViewController,
+        over host: UIViewController,
+        isDisposed: @escaping () -> Bool = { false },
+        completion: @escaping (Result<Bool, Error>) -> Void
     ) {
+        if isDisposed() {
+            completion(.failure(mapKitError(.lookAroundFailed, "The map view was disposed during Look Around.")))
+            return
+        }
         var presenter = host
         while let next = presenter.presentedViewController, !next.isBeingDismissed {
             presenter = next
         }
         if let transition = presenter.transitionCoordinator {
             transition.animate(alongsideTransition: nil) { _ in
-                present(vc, over: host, completion: completion)
+                present(vc, over: host, isDisposed: isDisposed, completion: completion)
             }
             return
         }
@@ -471,12 +484,16 @@ extension MapKitViewHost {
 
         let snapshot = try await Self.startSnapshot(input)
         try self.checkNotDisposedDuringSnapshot()
-        let tiles = options.showsOverlays ? try await self.loadTiles(for: snapshot, in: viewport) : SnapshotTiles()
+        let tiles = options.showsOverlays
+            ? try await self.loadTiles(for: snapshot, in: viewport)
+            : SnapshotTiles(viewport: viewport)
         try self.checkNotDisposedDuringSnapshot()
 
         #if os(iOS)
         var drawingFailure: Error?
-        let image = UIGraphicsImageRenderer(size: snapshotOptions.size).image { context in
+        let format = UIGraphicsImageRendererFormat.default()
+        format.preferredRange = .standard
+        let image = UIGraphicsImageRenderer(size: snapshotOptions.size, format: format).image { context in
             if !tiles.replacesBaseMap {
                 snapshot.image.draw(at: .zero)
             }
@@ -616,16 +633,37 @@ extension MapKitViewHost {
         }
     }
 
+    private var stackedOverlays: [any MKOverlay] {
+        self.mapView.overlays(in: .aboveRoads) + self.mapView.overlays(in: .aboveLabels)
+    }
+
+    private static func intersects(_ overlay: any MKOverlay, _ rect: MKMapRect) -> Bool {
+        overlay.intersects?(rect) ?? overlay.boundingMapRect.intersects(rect)
+    }
+
+    /// Under a pitched camera, `snapshotOptions.mapRect` only covers the flat
+    /// center region; `coverage` extends to the far visible ground toward the
+    /// horizon on the center's copy of the world.
+    private static func intersects(_ overlay: any MKOverlay, mapRect: MKMapRect, coverage: MKMapRect) -> Bool {
+        if intersects(overlay, mapRect) { return true }
+        guard !coverage.isNull else { return false }
+        let world = MKMapSize.world.width
+        for copy in Int((coverage.minX / world).rounded(.down))...Int((coverage.maxX / world).rounded(.down)) {
+            if intersects(overlay, coverage.offsetBy(dx: -Double(copy) * world, dy: 0)) { return true }
+        }
+        return false
+    }
+
     /// Draws in the map's own stacking order: levels bottom to top, each level
     /// bottom to top.
     private func drawOverlays(
         snapshot: MKMapSnapshotter.Snapshot, mapRect: MKMapRect, tiles: SnapshotTiles, in context: CGContext
     ) throws {
-        for overlay in self.mapView.overlays(in: .aboveRoads) + self.mapView.overlays(in: .aboveLabels) {
+        for overlay in self.stackedOverlays {
             if let tileOverlay = overlay as? FlutterTileOverlay {
                 try tileOverlay.draw(tiles, of: snapshot, in: context, deepestSplit: Self.deepestPatchSplit)
             } else if let flutterOverlay = overlay as? any FlutterOverlay,
-                      overlay.intersects?(mapRect) ?? overlay.boundingMapRect.intersects(mapRect) {
+                      Self.intersects(overlay, mapRect: mapRect, coverage: tiles.viewport.coverage) {
                 flutterOverlay.drawSnapshot(snapshot, in: context)
             }
         }
@@ -719,8 +757,8 @@ extension MapKitViewHost {
     private func loadTiles(
         for snapshot: MKMapSnapshotter.Snapshot, in viewport: TileViewport
     ) async throws -> SnapshotTiles {
-        let overlays = self.tileOverlays.values
-        guard !overlays.isEmpty else { return SnapshotTiles() }
+        let overlays = self.stackedOverlays.compactMap { $0 as? FlutterTileOverlay }
+        guard !overlays.isEmpty else { return SnapshotTiles(viewport: viewport) }
         let contentScale = Self.contentScale(of: snapshot)
         var requests: [TileRequest] = []
         for overlay in overlays {
