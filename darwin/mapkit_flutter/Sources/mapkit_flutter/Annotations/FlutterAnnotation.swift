@@ -10,8 +10,8 @@ import FlutterMacOS
 class FlutterAnnotation: NSObject, MKAnnotation, @unchecked Sendable {
     @objc dynamic var coordinate: CLLocationCoordinate2D
     let id: String
-    var title: String?
-    var subtitle: String?
+    @objc dynamic var title: String?
+    @objc dynamic var subtitle: String?
     var calloutConsumesTapEvents: Bool
     var alpha: Double
     var anchorPoint: CGPoint

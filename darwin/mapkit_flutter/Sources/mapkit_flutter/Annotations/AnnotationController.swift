@@ -125,8 +125,11 @@ extension MapKitViewHost {
 
     func annotationsToChange(_ annotations: [FlutterAnnotation]) {
         for newAnnotation in annotations {
-            if let annotationToChange = self.getAnnotation(with: newAnnotation.id),
-               annotationToChange != newAnnotation {
+            guard let annotationToChange = self.getAnnotation(with: newAnnotation.id) else {
+                self.addAnnotation(newAnnotation)
+                continue
+            }
+            if annotationToChange != newAnnotation {
                 updateAnnotation(annotation: newAnnotation)
             }
         }
@@ -184,6 +187,10 @@ extension MapKitViewHost {
                 customCallout.addArrangedSubview(subtitle)
             }
             annotationView.detailCalloutAccessoryView = customCallout
+        } else if annotation.calloutConsumesTapEvents, annotation.title != nil {
+            // A marker draws a lone title as its own label and refuses a callout
+            // until it has an accessory; a consumed tap needs a callout to land on.
+            annotationView.detailCalloutAccessoryView = UIView()
         } else {
             // Clear a stale accessory when the subtitle is removed on update.
             annotationView.detailCalloutAccessoryView = nil
@@ -192,7 +199,14 @@ extension MapKitViewHost {
     }
 
     #if os(iOS)
+    /// The recognizer sits on the annotation view, which also hosts the
+    /// callout as a subview outside its own bounds: a touch inside the bounds
+    /// is the pin, not the callout.
     @objc func onCalloutTapped(infoWindowTap: InfoWindowTapGestureRecognizer) {
+        if let view = infoWindowTap.annotationView,
+           view.bounds.contains(infoWindowTap.location(in: view)) {
+            return
+        }
         guard let annotationId = infoWindowTap.annotationId,
               self.currentlySelectedAnnotation == annotationId,
               let annotation = self.getAnnotation(with: annotationId),
@@ -268,10 +282,10 @@ extension MapKitViewHost {
             }
             return
         }
-        // Only `coordinate` is KVO-observable on MKAnnotation; the rest are
-        // plain properties whose assignment is synchronous regardless of an
-        // animation block. Keep the animation block to a single property so
-        // the bracketing reflects what actually animates.
+        // `coordinate`, `title` and `subtitle` are KVO-observable, which is how
+        // MapKit refreshes a visible pin, label or callout; the rest are plain
+        // properties. Only a coordinate change animates, so it alone sits in
+        // the animation block.
         #if os(iOS)
         UIView.animate(withDuration: 0.32) {
             oldAnnotation.coordinate = annotation.coordinate
@@ -347,7 +361,7 @@ extension MapKitViewHost {
 
 #if os(iOS)
 class InfoWindowTapGestureRecognizer: UITapGestureRecognizer {
-    var annotationView: UIView?
+    weak var annotationView: UIView?
     var annotationId: String?
 }
 #endif
