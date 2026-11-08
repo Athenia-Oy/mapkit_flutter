@@ -328,6 +328,7 @@ final class MKMapViewControllerImpl implements MKMapViewController {
   /// Non-null until native accepts `initialize`. A rejected one leaves the map
   /// untouched, so the next push retries the whole state.
   _InitialState? _pendingInitialState;
+  bool _initialStateDirty = false;
 
   final _ObjectSync<MKPointAnnotation> _annotations = .new((a) => a.id.value);
   final _ObjectSync<MKPolyline> _polylines = .new((p) => p.id.value);
@@ -350,6 +351,7 @@ final class MKMapViewControllerImpl implements MKMapViewController {
       camera: initialCamera.toPlatform(),
       configuration: configuration,
     );
+    _initialStateDirty = true;
     _annotations.queued = {...annotations};
     _polylines.queued = {...polylines};
     _polygons.queued = {...polygons};
@@ -359,7 +361,8 @@ final class MKMapViewControllerImpl implements MKMapViewController {
 
   Future<void> _pushInitialState() async {
     final pending = _pendingInitialState;
-    if (pending == null) return;
+    if (pending == null || !_initialStateDirty) return;
+    _initialStateDirty = false;
     final annotations = _annotations.queued;
     final polylines = _polylines.queued;
     final polygons = _polygons.queued;
@@ -414,6 +417,7 @@ final class MKMapViewControllerImpl implements MKMapViewController {
         camera: pending.camera,
         configuration: configuration,
       );
+      _initialStateDirty = true;
     }
     return _enqueuePush(
       () => _pendingInitialState == null
@@ -432,6 +436,7 @@ final class MKMapViewControllerImpl implements MKMapViewController {
   ) {
     if (setEquals(target, sync.queued)) return .value();
     sync.queued = {...target};
+    if (_pendingInitialState != null) _initialStateDirty = true;
     return _enqueuePush(() async {
       if (_pendingInitialState != null) {
         await _pushInitialState();

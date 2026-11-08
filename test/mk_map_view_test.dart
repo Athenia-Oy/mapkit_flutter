@@ -563,6 +563,56 @@ void main() {
       check(host.callNames).deepEquals(['initialize']);
     });
 
+    testWidgets(
+      'a multi-slice rebuild after a rejected initialize retries once',
+      (tester) async {
+        await pumpRejected(tester, map(annotations: {badThenGood('bad')}));
+
+        host
+          ..attemptedCallNames.clear()
+          ..errorToThrow = rejected
+          ..keepThrowing = true;
+        final uncaught = <Object>[];
+        await runZonedGuarded(() async {
+          await tester.pumpWidget(
+            map(
+              isZoomEnabled: false,
+              annotations: {badThenGood('still-bad')},
+              polylines: {polyline('p')},
+              polygons: {polygon('g')},
+              circles: {circle('c')},
+            ),
+          );
+          await tester.pump();
+        }, (error, _) => uncaught.add(error));
+
+        check(host.attemptedCallNames).deepEquals(['initialize']);
+        check(uncaught).single.isA<MapKitPlatformException>();
+
+        host
+          ..keepThrowing = false
+          ..errorToThrow = null;
+        await tester.pumpWidget(
+          map(
+            isZoomEnabled: false,
+            annotations: {badThenGood('good')},
+            polylines: {polyline('p')},
+            polygons: {polygon('g')},
+            circles: {circle('c')},
+          ),
+        );
+        await tester.pump();
+
+        check(host.callNames).deepEquals(['initialize']);
+        final params = host.initializeParams();
+        check(params.configuration.isZoomEnabled).isFalse();
+        check(params.annotations.single.title).equals('good');
+        check(params.polylines.single.id).equals('p');
+        check(params.polygons.single.id).equals('g');
+        check(params.circles.single.id).equals('c');
+      },
+    );
+
     group('a move accepted after a rejected initialize', () {
       Future<void> mountRejected(
         WidgetTester tester,
