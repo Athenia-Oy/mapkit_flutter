@@ -15,13 +15,77 @@
   `MKPointOfInterestFilter.including(...)` / `.excluding(...)` and any map
   configuration that holds one (`.including(const [...])` still works), and
   build a new list instead of mutating one read from a value.
+- **`MKMapCamera.pitch` must be in `[0, 90)`.** MapKit silently reset a pitch of
+  90 or more to 0 and mirrored a negative one; both now throw an `ArgumentError`
+  from the constructor, `copyWith` and `withZoomLevel`. Values MapKit caps by
+  zoom level, like 80 up close, are still accepted. Migration: pass a value in
+  range.
+- **Callbacks that could never fire throw an `ArgumentError`**, as
+  `onCalloutTap` without `calloutConsumesTapEvents` already did: `onDragStart` /
+  `onDragEnd` without `isDraggable`, `onCalloutTap` with neither a `title` nor a
+  `subtitle`, and `MKMapView.onMapFeatureSelected` without
+  `selectableMapFeatures`. `copyWith` enforces the same pairs. Migration: set
+  the missing flag, or pass the callback only when the flag is on
+  (`onDragEnd: editing ? save : null`).
+- **`fitCoordinates` no longer clamps spans.** A `padding` or `minimumSpan` that
+  widens a span past 180° latitude or 360° longitude now throws an
+  `ArgumentError` instead of silently fitting less padding than you asked for.
+  Migration: lower the `padding`.
+- **`takeSnapshot` draws tile overlays, and a tile that fails fails the
+  snapshot.** It fetches the visible tiles with the overlay's own
+  `MKTileOverlay.loadTile`, then composites them in the map's overlay order with
+  their `alpha`, on both platforms. With `canReplaceMapContent`, the snapshot
+  leaves out the base map. A snapshot with a tile overlay used to ignore it and
+  succeed; it now throws `snapshot-failed` when a tile can't load, isn't an
+  image (a server's 404 page included), doesn't arrive within 60 seconds, or the
+  view needs more than 1024 tiles. Migration: have a sparse source serve a
+  transparent tile instead of a 404, or `removeTileOverlay` around the snapshot.
+  `showsOverlays: false` also skips tiles, but it drops polylines, polygons and
+  circles too.
+
+### Added
+
+- A title-only system marker with `calloutConsumesTapEvents` now shows a callout
+  bubble to tap. MapKit otherwise draws a lone title as a label and shows no
+  bubble.
 
 ### Fixed
 
+- An exception thrown synchronously by a callback for a map event (`onTap`,
+  `onSelect`, `onCameraMove`, drags, overlay taps and so on) now reaches
+  `FlutterError.onError`. It used to become an error reply that the native side
+  discarded, so it vanished in every build mode. An `async` callback's error
+  goes to the zone, as it did before. Native event failures that can't reach
+  Dart are logged (subsystem `dev.mapkit.flutter`).
 - `MKMapView` diffs annotations, overlays and `selectableMapFeatures` against
   what it last sent to MapKit instead of the previous widget. Changing a `Set`
   in place and calling `setState` used to update nothing; it now updates the
   map.
+- A batch MapKit rejects no longer counts as sent. Adding a good annotation and
+  one with a bad icon, then fixing the icon, used to skip both silently; the fix
+  now delivers both. The same holds for polylines, polygons and circles. A
+  rejected initial state, which leaves the map untouched, is retried whole on
+  the next change, except for a camera `setCamera` or `setRegion` has since
+  replaced.
+- A snapshot in flight when its map is disposed fails with `snapshot-failed`. It
+  used to return as a success, missing the annotations and overlays the dispose
+  had just removed.
+- Popping a route while `MKMapView` has an update queued behind an in-flight
+  controller call no longer throws an uncaught `MapKitDisposedException`.
+  Controller methods you call after dispose still throw it.
+- Snapshots draw a `MKCircle` at its real size under a rotated camera; at
+  heading 90 it collapsed to nothing.
+- Changing the `title` or `subtitle` of a visible annotation updates the label
+  under the marker and the callout, instead of leaving the old text on screen.
+- A map unmounted before its platform view finished creating no longer leaks its
+  native view and `MKMapView`.
+- Tapping an already selected pin no longer fires `onCalloutTap`; only the
+  bubble does (iOS).
+- Disposing a map with a callout selected no longer leaks the annotation view
+  (iOS).
+- `MKMapView` throws `MapKitUnsupportedPlatformException` on the web, as
+  documented. A browser on an iPhone or a Mac used to get a `UiKitView` or
+  `AppKitView`.
 - `MKAnnotationIcon.image` throws an `ArgumentError` for an `imagePixelRatio`
   that is not finite and `> 0`, and `MKPointAnnotation` throws one for a
   non-finite `zPriority` or `anchorPoint`. These used to reach MapKit as NaN or

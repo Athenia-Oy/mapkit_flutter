@@ -33,9 +33,10 @@ setting) when used on macOS.
   throws `ArgumentError` when the map builds).
 - Value types validate in every build mode and throw `ArgumentError` (latitude
   outside `[-90, 90]` — no clamping, non-finite numbers, negative widths/radii,
-  alpha outside `[0, 1]`, zoom range min > max, a single gradient color,
-  `imagePixelRatio` ≤ 0), so they have no `const` constructors. Longitude wraps
-  into `[-180, 180)`. `MKCameraZoomRange.unbounded` is the const default.
+  alpha outside `[0, 1]`, camera `pitch` outside `[0, 90)`, zoom range min >
+  max, a single gradient color, `imagePixelRatio` ≤ 0), so they have no `const`
+  constructors. Longitude wraps into `[-180, 180)`.
+  `MKCameraZoomRange.unbounded` is the const default.
   `MKPolyline`/`MKPolygon`/`MKPointOfInterestFilter.including`/`.excluding`
   store unmodifiable copies of their lists, so the filters aren't `const`
   either: `MKPointOfInterestFilter.including(const [...])`.
@@ -55,26 +56,36 @@ setting) when used on macOS.
   (`MockSpec<MKMapViewController>`) instead of hiding it behind a wrapper.
 - Callbacks: `onSelect`/`onDeselect` per annotation (`onSelect` = user tap or
   `selectAnnotation`; there is no `onTap` on annotations);
-  `onMapFeatureSelected` (iOS, needs `selectableMapFeatures`); `onCameraMove` is
-  continuous (every visible-region change); `onUserTrackingModeChanged` reports
-  MapKit's own mode changes (e.g. `none` after a pan) — keep `userTrackingMode`
-  in sync through it. `copyWith(x: null)` clears a nullable field.
+  `onMapFeatureSelected` (iOS, needs `selectableMapFeatures`);
+  `onDragStart`/`onDragEnd` need `isDraggable: true`; a callback that could
+  never fire throws `ArgumentError`. `onCameraMove` is continuous (every
+  visible-region change); `onUserTrackingModeChanged` reports MapKit's own mode
+  changes (e.g. `none` after a pan) — keep `userTrackingMode` in sync through
+  it. A synchronous throw inside a map-event callback reaches
+  `FlutterError.onError`; an `async` callback's error goes to the zone.
+  `copyWith(x: null)` clears a nullable field.
 - Error contract: misuse throws in every build mode — `ArgumentError` for
   invalid values/duplicate ids, `MapKitUnsupportedPlatformException` for
-  iOS-only settings on macOS, `MapKitDisposedException` after dispose. Native
-  failures are `MapKitPlatformException` with a stable `code`:
-  `snapshot-failed`, `look-around-failed`, `unsupported-platform`,
-  `duplicate-id`, `invalid-icon` (undecodable image bytes / unknown SF Symbol),
-  `unavailable-poi-category` (iOS 18 / macOS 15 category on an older OS),
-  `invalid-argument`. Errors from declarative content surface as uncaught zone
-  errors. Delegate failures surface as widget callbacks `onDidFailToLocateUser`
+  iOS-only settings on macOS and any build on the web, `MapKitDisposedException`
+  from controller calls after dispose. Native failures are
+  `MapKitPlatformException` with a stable `code`: `snapshot-failed`,
+  `look-around-failed`, `unsupported-platform`, `duplicate-id`, `invalid-icon`
+  (undecodable image bytes / unknown SF Symbol), `unavailable-poi-category` (iOS
+  18 / macOS 15 category on an older OS), `invalid-argument`. `snapshot-failed`
+  includes a tile overlay tile that fails to load or isn't an image (a 404 page
+  counts), tiles missing the 60-second deadline, a view needing more than 1024
+  tiles, a tile that can't be projected onto the view, and a map disposed during
+  the snapshot. Errors from declarative content surface as uncaught zone errors;
+  a rejected batch stays unapplied, and the next change to the set resends all
+  of it. Delegate failures surface as widget callbacks `onDidFailToLocateUser`
   (e.g. no location permission) / `onDidFailLoadingMap`, payload = error
   description.
 - Tap capture is explicit: overlays need `consumeTapEvents: true` for `onTap`
   (setting `onTap` without it throws), annotations need
-  `calloutConsumesTapEvents: true` for `onCalloutTap` (iOS only). Only the
-  top-most capturing overlay fires; polyline hit area = half the `lineWidth`, at
-  least 8 points.
+  `calloutConsumesTapEvents: true` and a `title` or `subtitle` for
+  `onCalloutTap` (iOS only; fires on the bubble, not the pin). Only the top-most
+  capturing overlay fires; polyline hit area = half the `lineWidth`, at least 8
+  points.
 - Style config (`preferredConfiguration:`) carries only
   elevation/emphasis/POI/traffic; `MKMapView` properties (`isZoomEnabled`,
   `showsCompass`, `showsUserTrackingButton`, `cameraZoomRange`,
@@ -86,7 +97,8 @@ setting) when used on macOS.
 - google_maps_flutter dialect available via the exported `CameraConveniences`
   extension: `zoomTo/zoomBy/zoomIn/zoomOut/scrollBy/fitCoordinates/getZoomLevel`
   — pure Dart over the canonical calls; they throw `StateError` before the first
-  layout, and `fitCoordinates([])` throws `ArgumentError`.
+  layout, and `fitCoordinates([])` or a padded span past 180°/360° throws
+  `ArgumentError`.
 - `MKMapCamera.distance` is meters (`centerCoordinateDistance`);
   `MKMapCamera.withZoomLevel(...)` / `camera.zoomLevel` convert Web-Mercator
   zoom levels approximately.
