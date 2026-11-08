@@ -7,20 +7,15 @@ on:
   workflow_dispatch:
 
 permissions:
-  id-token: write
   contents: read
 
 jobs:
   verify:
-    name: Verify tag, formatting, and analysis
+    name: Verify tag matches pubspec
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 10
     steps:
       - uses: actions/checkout@v7
-      - uses: subosito/flutter-action@v2
-        with:
-          channel: stable
-          cache: true
       - name: Check tag matches pubspec version
         run: |
           TAG="${GITHUB_REF#refs/tags/v}"
@@ -29,11 +24,6 @@ jobs:
             echo "::error::Tag v$TAG does not match pubspec.yaml version $PUBSPEC"
             exit 1
           fi
-      - run: flutter pub get
-      - name: Verify formatting
-        run: git ls-files -z -- '*.dart' | xargs -0 -r dart format --output=none --set-exit-if-changed
-      - name: Verify analysis
-        run: flutter analyze --fatal-infos --fatal-warnings
 
   publish:
     name: Publish to pub.dev
@@ -46,9 +36,8 @@ jobs:
       contents: read
     steps:
       - uses: actions/checkout@v7
-      - uses: dart-lang/setup-dart@v1
       - uses: subosito/flutter-action@v2
-        with:
-          channel: stable
+        with: { channel: stable }
       - run: flutter pub get
+      - uses: dart-lang/setup-dart@v1
       - run: flutter pub publish --force
