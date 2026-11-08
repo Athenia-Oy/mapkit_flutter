@@ -176,7 +176,7 @@ extension MapKitViewHost {
         #if os(iOS)
         // The multi-line subtitle accessory is built with UIKit; macOS uses
         // MapKit's default callout (title/subtitle).
-        if let lines = annotation.subtitle?.split(whereSeparator: { $0.isNewline }) {
+        if let lines = annotation.subtitle?.split(whereSeparator: { $0.isNewline }), !lines.isEmpty {
             let customCallout = UIStackView()
             customCallout.axis = .vertical
             customCallout.alignment = .fill
@@ -187,7 +187,7 @@ extension MapKitViewHost {
                 customCallout.addArrangedSubview(subtitle)
             }
             annotationView.detailCalloutAccessoryView = customCallout
-        } else if annotation.calloutConsumesTapEvents, annotation.title != nil {
+        } else if annotation.calloutConsumesTapEvents, let title = annotation.title, !title.isEmpty {
             // A marker draws a lone title as its own label and refuses a callout
             // until it has an accessory; a consumed tap needs a callout to land on.
             annotationView.detailCalloutAccessoryView = UIView()

@@ -189,6 +189,36 @@ void main() {
           onCalloutTap: () {},
         ),
       ),
+      (
+        'onCalloutTap',
+        () => .new(
+          id: const .new('a'),
+          coordinate: applePark,
+          title: '',
+          calloutConsumesTapEvents: true,
+          onCalloutTap: () {},
+        ),
+      ),
+      (
+        'onCalloutTap',
+        () => .new(
+          id: const .new('a'),
+          coordinate: applePark,
+          subtitle: '',
+          calloutConsumesTapEvents: true,
+          onCalloutTap: () {},
+        ),
+      ),
+      (
+        'onCalloutTap',
+        () => .new(
+          id: const .new('a'),
+          coordinate: applePark,
+          subtitle: '\n',
+          calloutConsumesTapEvents: true,
+          onCalloutTap: () {},
+        ),
+      ),
     ]) {
       test('$name that could never fire throws', () {
         check(build).throws<ArgumentError>()

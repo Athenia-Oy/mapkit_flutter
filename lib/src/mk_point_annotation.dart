@@ -109,7 +109,7 @@ final class MKPointAnnotation({
         'requires calloutConsumesTapEvents: true',
       );
     }
-    if (onCalloutTap != null && title == null && subtitle == null) {
+    if (onCalloutTap != null && !_hasCalloutText(title, subtitle)) {
       throw ArgumentError.value(
         onCalloutTap,
         'onCalloutTap',
@@ -243,3 +243,9 @@ final class MKPointAnnotation({
     return (b..write(')')).toString();
   }
 }
+
+final _onlyNewlines = RegExp(r'^[\r\n\u000B\u000C\u0085\u2028\u2029]*$');
+
+bool _hasCalloutText(String? title, String? subtitle) =>
+    (title != null && title.isNotEmpty) ||
+    (subtitle != null && !_onlyNewlines.hasMatch(subtitle));
