@@ -154,7 +154,15 @@ jobs:
           set -e
           flutter build ios --release --no-codesign
           flutter build macos --debug
-          xcodebuild test -workspace macos/Runner.xcworkspace -scheme Runner -destination 'platform=macOS' -quiet SWIFT_TREAT_WARNINGS_AS_ERRORS=YES
+          xcodebuild test -workspace macos/Runner.xcworkspace -scheme Runner -destination 'platform=macOS' -quiet SWIFT_TREAT_WARNINGS_AS_ERRORS=YES -resultBundlePath "$RUNNER_TEMP/macos-native.xcresult"
+      # -quiet hides assertion messages; the result bundle keeps them.
+      - name: Upload macOS native test results
+        if: failure()
+        uses: actions/upload-artifact@v7
+        with:
+          name: macos-native-xcresult
+          path: ${{ runner.temp }}/macos-native.xcresult
+          if-no-files-found: ignore
       # Run all macOS integration tests in a single app launch, and exit cleanly
       # if the host hangs at teardown after "All tests passed!".
       - name: macOS integration
