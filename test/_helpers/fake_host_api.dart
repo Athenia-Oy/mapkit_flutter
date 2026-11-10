@@ -9,6 +9,9 @@ final class FakeHostApi extends MapKitHostApi {
 
   final List<(String, Object?)> calls = [];
 
+  /// Names of every call that reached the host, whether it succeeded or threw.
+  final List<String> attemptedCallNames = [];
+
   /// Names of all recorded calls, in order.
   List<String> get callNames => [for (final c in calls) c.$1];
 
@@ -30,11 +33,16 @@ final class FakeHostApi extends MapKitHostApi {
   bool removeTileOverlayResult = true;
   bool lookAroundResult = false;
   Object? errorToThrow;
+  bool keepThrowing = false;
+
+  /// Holds [takeSnapshot] in flight, keeping the controller's queue busy.
+  Future<void>? snapshotGate;
 
   void _record(String name, Object? args) {
+    attemptedCallNames.add(name);
     final e = errorToThrow;
     if (e case final error?) {
-      errorToThrow = null;
+      if (!keepThrowing) errorToThrow = null;
       // Rethrows whatever the test staged — Exception or Error — so both
       // halves of _enqueue's generic catch are reachable.
       // ignore: only_throw_errors
@@ -138,6 +146,7 @@ final class FakeHostApi extends MapKitHostApi {
 
   @override
   Future<Uint8List> takeSnapshot(PlatformSnapshotOptions options) async {
+    await snapshotGate;
     _record('takeSnapshot', options);
     return .new(0);
   }

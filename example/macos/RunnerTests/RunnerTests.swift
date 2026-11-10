@@ -88,12 +88,15 @@ private func annotation(_ id: String, title: String? = nil, callout: Bool = fals
 
 /// A real PNG (MapKit must decode it), `width`×`height` points at ratio 1.
 private func pngIcon(width: CGFloat = 20, height: CGFloat = 40) -> PlatformAnnotationIcon {
-    let image = NSImage(size: NSSize(width: width, height: height))
-    image.lockFocus()
+    let rep = NSBitmapImageRep(
+        bitmapDataPlanes: nil, pixelsWide: Int(width), pixelsHigh: Int(height), bitsPerSample: 8, samplesPerPixel: 4,
+        hasAlpha: true, isPlanar: false, colorSpaceName: .deviceRGB, bytesPerRow: 0, bitsPerPixel: 0)!
+    NSGraphicsContext.saveGraphicsState()
+    NSGraphicsContext.current = NSGraphicsContext(bitmapImageRep: rep)
     NSColor.red.setFill()
     NSRect(x: 0, y: 0, width: width, height: height).fill()
-    image.unlockFocus()
-    let png = NSBitmapImageRep(data: image.tiffRepresentation!)!.representation(using: .png, properties: [:])!
+    NSGraphicsContext.restoreGraphicsState()
+    let png = rep.representation(using: .png, properties: [:])!
     return PlatformAnnotationIcon(type: .image, imageBytes: FlutterStandardTypedData(bytes: png), imagePixelRatio: 1)
 }
 
@@ -679,7 +682,7 @@ final class NaturalApiTests: XCTestCase {
             contentRect: NSRect(x: 0, y: 0, width: 400, height: 400), styleMask: [.titled], backing: .buffered, defer: false)
         window.isReleasedWhenClosed = false
         window.contentView = host.mapView
-        window.orderFront(nil)
+        window.orderBack(nil)
         addTeardownBlock { @MainActor in window.close() }
         return window
     }

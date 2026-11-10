@@ -2,7 +2,6 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/gestures.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter/widgets.dart';
-import 'package:mapkit_flutter/src/_internal/map_object_updates.dart';
 import 'package:mapkit_flutter/src/cl_location_coordinate_2d.dart';
 import 'package:mapkit_flutter/src/exceptions.dart';
 import 'package:mapkit_flutter/src/messages.g.dart';
@@ -26,10 +25,10 @@ import 'package:mapkit_flutter/src/mk_polyline.dart';
 /// properties they are on `MKMapView`. Content is declarative: [annotations]
 /// and overlay sets diff on rebuild.
 ///
-/// iOS and macOS only. Building this widget on any other platform throws a
-/// [MapKitUnsupportedPlatformException] rather than degrading silently; so
-/// does an iOS-only setting on macOS (`followWithHeading`,
-/// [selectableMapFeatures], [onMapFeatureSelected],
+/// iOS and macOS only. Building this widget on any other platform, the web
+/// included, throws a [MapKitUnsupportedPlatformException] rather than
+/// degrading silently; so does an iOS-only setting on macOS
+/// (`followWithHeading`, [selectableMapFeatures], [onMapFeatureSelected],
 /// `insetsLayoutMarginsFromSafeArea: false`, an annotation's
 /// `calloutConsumesTapEvents`).
 ///
@@ -155,12 +154,13 @@ final class const MKMapView({
   final ValueChanged<String>? onDidFailLoadingMap,
 
   /// The map could not determine the user's location — most commonly because
-  /// location permission was denied — while [showsUserLocation] is enabled
+  /// location permission was denied — while it is locating the user
   /// (`MKMapViewDelegate.mapView(_:didFailToLocateUserWithError:)`).
   final ValueChanged<String>? onDidFailToLocateUser,
 
   /// The user selected a map feature (`MKMapFeatureAnnotation`). iOS only
-  /// (must be `null` on macOS); needs [selectableMapFeatures].
+  /// (must be `null` on macOS). Needs [selectableMapFeatures]: with none it
+  /// could never fire, so this throws an [ArgumentError].
   final ValueChanged<MKMapFeature>? onMapFeatureSelected,
 
   /// Replaces the platform view with an injected controller so widget tests
@@ -192,7 +192,7 @@ final class _MKMapViewState extends State<MKMapView>
   void initState() {
     super.initState();
     _checkWidget();
-    _snapshotWidget();
+    _refreshDispatchMaps();
     if (widget.debugControllerFactory case final factory?) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (mounted) _wireController(factory(this));
@@ -201,15 +201,26 @@ final class _MKMapViewState extends State<MKMapView>
   }
 
   /// Rejects what MapKit can't represent before anything reaches native:
-  /// duplicate ids (one would silently replace the other) and iOS-only
-  /// settings on macOS (they would silently do nothing).
+  /// duplicate ids (one would silently replace the other), callbacks nothing
+  /// can fire, and iOS-only settings on macOS (they would silently do nothing).
   void _checkWidget() {
     final w = widget;
     _checkUniqueIds('annotations', w.annotations, (a) => a.id.value);
     _checkUniqueIds('polylines', w.polylines, (p) => p.id.value);
     _checkUniqueIds('polygons', w.polygons, (p) => p.id.value);
     _checkUniqueIds('circles', w.circles, (c) => c.id.value);
-    if (defaultTargetPlatform == .macOS) _checkMacOSSupport(w);
+    if (!kIsWeb && defaultTargetPlatform == .macOS) _checkMacOSSupport(w);
+    _checkCallbacksCanFire(w);
+  }
+
+  static void _checkCallbacksCanFire(MKMapView w) {
+    if (w.onMapFeatureSelected != null && w.selectableMapFeatures.isEmpty) {
+      throw ArgumentError.value(
+        w.onMapFeatureSelected,
+        'onMapFeatureSelected',
+        'requires a non-empty selectableMapFeatures',
+      );
+    }
   }
 
   static void _checkUniqueIds<T>(
@@ -234,11 +245,11 @@ final class _MKMapViewState extends State<MKMapView>
     if (w.userTrackingMode == .followWithHeading) {
       unsupported('MKMapView.userTrackingMode: followWithHeading');
     }
-    if (w.selectableMapFeatures.isNotEmpty) {
-      unsupported('MKMapView.selectableMapFeatures');
-    }
     if (w.onMapFeatureSelected != null) {
       unsupported('MKMapView.onMapFeatureSelected');
+    }
+    if (w.selectableMapFeatures.isNotEmpty) {
+      unsupported('MKMapView.selectableMapFeatures');
     }
     if (!w.insetsLayoutMarginsFromSafeArea) {
       unsupported('MKMapView.insetsLayoutMarginsFromSafeArea: false');
@@ -261,6 +272,7 @@ final class _MKMapViewState extends State<MKMapView>
   @override
   Widget build(BuildContext context) {
     if (widget.debugControllerFactory != null) return const SizedBox.expand();
+    if (kIsWeb) throw MapKitUnsupportedPlatformException(defaultTargetPlatform);
 
     const viewType = 'dev.mapkit.flutter/map_view';
     return switch (defaultTargetPlatform) {
@@ -287,7 +299,7 @@ final class _MKMapViewState extends State<MKMapView>
   /// platform view (and its host API handler) exists.
   void _wireController(MKMapViewControllerImpl controller) {
     _controller = controller;
-    _snapshotWidget();
+    _refreshDispatchMaps();
     controller.initialize(
       initialCamera: widget.initialCamera,
       configuration: _platformConfiguration(),
@@ -357,89 +369,32 @@ final class _MKMapViewState extends State<MKMapView>
   void didUpdateWidget(covariant MKMapView oldWidget) {
     super.didUpdateWidget(oldWidget);
     _checkWidget();
-    final sent = (
-      annotations: _annotations.values.toSet(),
-      polylines: _polylines.values.toSet(),
-      polygons: _polygons.values.toSet(),
-      circles: _circles.values.toSet(),
-      selectableMapFeatures: _selectableMapFeatures,
-    );
-    _snapshotWidget();
+    final sentSelectableMapFeatures = _selectableMapFeatures;
+    _refreshDispatchMaps();
     final c = _controller;
     if (c == null) return;
 
-    if (_configurationChanged(oldWidget, sent.selectableMapFeatures)) {
+    if (_configurationChanged(oldWidget, sentSelectableMapFeatures)) {
       c.updateMapConfiguration(_platformConfiguration());
     }
-    _updateAnnotations(c, sent.annotations);
-    _updatePolylines(c, sent.polylines);
-    _updatePolygons(c, sent.polygons);
-    _updateCircles(c, sent.circles);
+    c
+      ..syncAnnotations(widget.annotations)
+      ..syncPolylines(widget.polylines)
+      ..syncPolygons(widget.polygons)
+      ..syncCircles(widget.circles);
   }
 
-  void _snapshotWidget() {
-    // The snapshot is what native last received: the next diff compares
-    // against it, not `oldWidget`, whose Sets a caller who mutates in place
-    // shares with the new widget.
-    //
-    // The id→object maps also back inbound event dispatch. The models' `==`
-    // excludes callbacks (so a closure swap doesn't trigger a needless native
-    // recycle); a rebuild that changes only an `onTap`/`onDrag*` closure is
-    // therefore `setEquals`-equal and skips the native update — but dispatch
-    // must still pick up the fresh closures, or a tap fires stale captured
-    // state.
+  void _refreshDispatchMaps() {
+    // The models' `==` excludes callbacks (so a closure swap doesn't trigger a
+    // needless native recycle); a rebuild that changes only an `onTap`/`onDrag*`
+    // closure is therefore `setEquals`-equal and skips the native update — but
+    // dispatch must still pick up the fresh closures, or a tap fires stale
+    // captured state.
     _annotations = {for (final a in widget.annotations) a.id: a};
     _polylines = {for (final p in widget.polylines) p.id: p};
     _polygons = {for (final p in widget.polygons) p.id: p};
     _circles = {for (final o in widget.circles) o.id: o};
     _selectableMapFeatures = {...widget.selectableMapFeatures};
-  }
-
-  void _updateAnnotations(
-    MKMapViewControllerImpl c,
-    Set<MKPointAnnotation> sent,
-  ) {
-    if (!setEquals(widget.annotations, sent)) {
-      final updates = MapObjectUpdates.between(
-        sent,
-        widget.annotations,
-        idOf: (a) => a.id.value,
-      );
-      c.updateAnnotations(updates);
-    }
-  }
-
-  void _updatePolylines(MKMapViewControllerImpl c, Set<MKPolyline> sent) {
-    if (!setEquals(widget.polylines, sent)) {
-      final updates = MapObjectUpdates.between(
-        sent,
-        widget.polylines,
-        idOf: (p) => p.id.value,
-      );
-      c.updatePolylines(updates);
-    }
-  }
-
-  void _updatePolygons(MKMapViewControllerImpl c, Set<MKPolygon> sent) {
-    if (!setEquals(widget.polygons, sent)) {
-      final updates = MapObjectUpdates.between(
-        sent,
-        widget.polygons,
-        idOf: (p) => p.id.value,
-      );
-      c.updatePolygons(updates);
-    }
-  }
-
-  void _updateCircles(MKMapViewControllerImpl c, Set<MKCircle> sent) {
-    if (!setEquals(widget.circles, sent)) {
-      final updates = MapObjectUpdates.between(
-        sent,
-        widget.circles,
-        idOf: (o) => o.id.value,
-      );
-      c.updateCircles(updates);
-    }
   }
 
   @override

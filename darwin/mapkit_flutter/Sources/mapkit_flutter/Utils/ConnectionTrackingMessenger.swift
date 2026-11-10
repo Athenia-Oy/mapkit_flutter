@@ -8,8 +8,9 @@ import FlutterMacOS
 
 /// Forwards to `base` and records every handler connection, so a disposed view can drop its handlers
 /// via `cleanUpConnection`. Never `setMessageHandler(nil)`: on macOS the engine stores the nil handler
-/// and crashes on the next message to that channel.
-final class ConnectionTrackingMessenger: NSObject, FlutterBinaryMessenger {
+/// and crashes on the next message to that channel. `@unchecked`: only used on the platform thread,
+/// the host's `deinit` included.
+final class ConnectionTrackingMessenger: NSObject, FlutterBinaryMessenger, @unchecked Sendable {
     private let base: FlutterBinaryMessenger
     private var connections: [FlutterBinaryMessengerConnection] = []
     init(_ base: FlutterBinaryMessenger) { self.base = base }

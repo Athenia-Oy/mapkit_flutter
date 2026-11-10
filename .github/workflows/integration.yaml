@@ -135,4 +135,12 @@ jobs:
       - run: flutter config --enable-swift-package-manager
       - run: flutter build ios --config-only --simulator
         working-directory: example
-      - run: xcodebuild test -workspace example/ios/Runner.xcworkspace -scheme Runner -destination 'platform=iOS Simulator,name=iPhone 16' -quiet
+      - run: xcodebuild test -workspace example/ios/Runner.xcworkspace -scheme Runner -destination 'platform=iOS Simulator,name=iPhone 16' -quiet -resultBundlePath "$RUNNER_TEMP/native-ios.xcresult"
+      # -quiet hides assertion messages; the result bundle keeps them.
+      - name: Upload iOS native test results
+        if: failure()
+        uses: actions/upload-artifact@v7
+        with:
+          name: native-ios-xcresult
+          path: ${{ runner.temp }}/native-ios.xcresult
+          if-no-files-found: ignore

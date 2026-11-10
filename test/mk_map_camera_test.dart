@@ -34,11 +34,7 @@ void main() {
     test('rejects non-positive or non-finite parameters', () {
       check(() => MKMapCamera(centerCoordinate: applePark, distance: 0))
           .throws<ArgumentError>();
-      for (final bad in [
-        double.nan,
-        double.infinity,
-        double.negativeInfinity,
-      ]) {
+      for (final bad in <double>[.nan, .infinity, .negativeInfinity]) {
         check(() => MKMapCamera(centerCoordinate: applePark, distance: bad))
             .throws<ArgumentError>();
         check(
@@ -56,6 +52,36 @@ void main() {
           ),
         ).throws<ArgumentError>();
       }
+    });
+
+    group('pitch', () {
+      MKMapCamera at(double pitch) =>
+          .new(centerCoordinate: applePark, distance: 1000, pitch: pitch);
+
+      for (final bad in [-0.001, -10.0, 90.0, 90.001, 170.0, 360.0, 400.0]) {
+        test('$bad is rejected: MapKit would not honour it', () {
+          check(() => at(bad)).throws<ArgumentError>()
+            ..has((e) => e.name, 'name').equals('pitch')
+            ..has((e) => e.invalidValue, 'invalidValue').equals(bad);
+        });
+      }
+
+      for (final good in [0.0, 1.0, 45.0, 75.0, 89.9]) {
+        test('$good is accepted: MapKit honours it or caps it by zoom', () {
+          check(at(good).pitch).equals(good);
+        });
+      }
+
+      test('copyWith and withZoomLevel validate too', () {
+        check(() => at(10).copyWith(pitch: 170)).throws<ArgumentError>();
+        check(
+          () => MKMapCamera.withZoomLevel(
+            centerCoordinate: applePark,
+            zoomLevel: 14,
+            pitch: 170,
+          ),
+        ).throws<ArgumentError>();
+      });
     });
 
     test('round-trips through the platform type', () {

@@ -4,33 +4,6 @@ import UIKit
 import XCTest
 @testable import mapkit_flutter
 
-/// Swallows every message, recording which host -> Dart methods were sent.
-final class NoopMessenger: NSObject, FlutterBinaryMessenger {
-    private(set) var channels: [String] = []
-
-    func send(onChannel channel: String, message: Data?) {
-        channels.append(channel)
-    }
-
-    func send(onChannel channel: String, message: Data?, binaryReply callback: FlutterBinaryReply?) {
-        channels.append(channel)
-        callback?(MessagesPigeonCodec.shared.encode([] as [Any?]))
-    }
-
-    func sent(_ method: String) -> Int {
-        channels.filter { $0.contains(".\(method).") }.count
-    }
-
-    func setMessageHandlerOnChannel(
-        _ channel: String,
-        binaryMessageHandler handler: FlutterBinaryMessageHandler?
-    ) -> FlutterBinaryMessengerConnection {
-        0
-    }
-
-    func cleanUpConnection(_ connection: FlutterBinaryMessengerConnection) {}
-}
-
 private func annotation(_ id: String, callout: Bool = false) -> PlatformAnnotation {
     PlatformAnnotation(
         id: id,
@@ -324,5 +297,176 @@ final class SnapshotDrawOrderTests: XCTestCase {
         let end = rgb(shot, at: CLLocationCoordinate2D(latitude: 0, longitude: 0.38), in: host)
         XCTAssertTrue(start.r > 0.8 && start.g < 0.3 && start.b < 0.3, "gradient start is \(start)")
         XCTAssertTrue(end.b > 0.8 && end.r < 0.3 && end.g < 0.3, "gradient end is \(end)")
+    }
+}
+
+/// A callout tap recognizer pinned to one location, in the annotation view's
+/// coordinates.
+final class FixedPointCalloutTap: InfoWindowTapGestureRecognizer {
+    private let point: CGPoint
+
+    init(at point: CGPoint) {
+        self.point = point
+        super.init(target: nil, action: nil)
+    }
+
+    override func location(in view: UIView?) -> CGPoint { point }
+}
+
+@MainActor
+final class CalloutTests: XCTestCase {
+    /// A map in a real window with annotation "a" selected and its callout up.
+    private func mapWithSelectedCallout(
+        _ messenger: NoopMessenger, subtitle: String? = "Subtitle",
+        icon: PlatformAnnotationIcon = PlatformAnnotationIcon(type: .marker)
+    ) async throws -> (host: MapKitViewHost, view: MKAnnotationView, callout: UIView) {
+        let scene = try XCTUnwrap(UIApplication.shared.connectedScenes.compactMap { $0 as? UIWindowScene }.first)
+        let window = UIWindow(windowScene: scene)
+        window.frame = CGRect(x: 0, y: 0, width: 400, height: 800)
+        let root = UIViewController()
+        window.rootViewController = root
+        window.makeKeyAndVisible()
+        addTeardownBlock { @MainActor in window.isHidden = true }
+        let host = MapKitViewHost(messenger: messenger, id: 0)
+        root.view.addSubview(host.view())
+        host.view().frame = root.view.bounds
+        host.mapView.frame = root.view.bounds
+        host.mapView.setRegion(MKCoordinateRegion(
+            center: CLLocationCoordinate2D(latitude: 0, longitude: 0),
+            span: MKCoordinateSpan(latitudeDelta: 1, longitudeDelta: 1)), animated: false)
+        try host.updateAnnotations(
+            toAdd: [titledAnnotation("a", title: "Title", subtitle: subtitle, callout: true, icon: icon)],
+            toChange: [], idsToRemove: [])
+        try await Task.sleep(for: .milliseconds(500))
+        XCTAssertTrue(try host.selectAnnotation(annotationId: "a"))
+        let annotation = try XCTUnwrap(host.annotationsById["a"])
+        for _ in 0..<40 {
+            if let view = host.mapView.view(for: annotation),
+               let callout = view.subviews.first(where: { String(describing: type(of: $0)).contains("Callout") }) {
+                return (host, view, callout)
+            }
+            try await Task.sleep(for: .milliseconds(100))
+        }
+        XCTFail("MapKit showed no callout view")
+        throw CancellationError()
+    }
+
+    private func tap(_ host: MapKitViewHost, _ view: MKAnnotationView, at point: CGPoint) async throws {
+        let recognizer = FixedPointCalloutTap(at: point)
+        recognizer.annotationId = "a"
+        recognizer.annotationView = view
+        host.onCalloutTapped(infoWindowTap: recognizer)
+        try await Task.sleep(for: .milliseconds(200))
+    }
+
+    func testTappingTheSelectedPinIsNotACalloutTap() async throws {
+        let messenger = NoopMessenger()
+        let (host, view, callout) = try await mapWithSelectedCallout(messenger)
+
+        try await tap(host, view, at: CGPoint(x: view.bounds.midX, y: view.bounds.midY))
+        XCTAssertEqual(messenger.sent("onCalloutTap"), 0, "a tap on the pin fired onCalloutTap")
+
+        try await tap(host, view, at: CGPoint(x: callout.frame.midX, y: callout.frame.midY))
+        XCTAssertEqual(messenger.sent("onCalloutTap"), 1, "a tap on the callout must still fire")
+    }
+
+    func testATitleOnlyMarkerShowsATappableCallout() async throws {
+        let messenger = NoopMessenger()
+        let (host, view, callout) = try await mapWithSelectedCallout(messenger, subtitle: nil)
+
+        try await tap(host, view, at: CGPoint(x: callout.frame.midX, y: callout.frame.midY))
+        XCTAssertEqual(messenger.sent("onCalloutTap"), 1)
+    }
+
+    func testTappingASelectedImagePinIsNotACalloutTap() async throws {
+        let messenger = NoopMessenger()
+        let format = UIGraphicsImageRendererFormat()
+        format.scale = 1
+        let png = UIGraphicsImageRenderer(size: CGSize(width: 40, height: 40), format: format).pngData { context in
+            UIColor.red.setFill()
+            context.fill(CGRect(x: 0, y: 0, width: 40, height: 40))
+        }
+        let (host, view, callout) = try await mapWithSelectedCallout(messenger, icon: PlatformAnnotationIcon(
+            type: .image, imageBytes: FlutterStandardTypedData(bytes: png), imagePixelRatio: 1))
+
+        try await tap(host, view, at: CGPoint(x: view.bounds.midX, y: view.bounds.midY))
+        XCTAssertEqual(messenger.sent("onCalloutTap"), 0)
+
+        try await tap(host, view, at: CGPoint(x: callout.frame.midX, y: callout.frame.midY))
+        XCTAssertEqual(messenger.sent("onCalloutTap"), 1)
+    }
+
+    /// The pin/callout split above rests on this: an OS release that moves the
+    /// callout over the pin must fail here, not silently swallow callout taps.
+    func testMapKitKeepsTheCalloutOutsideTheAnnotationViewsBounds() async throws {
+        let (_, view, callout) = try await mapWithSelectedCallout(NoopMessenger())
+
+        XCTAssertFalse(
+            view.bounds.insetBy(dx: 1, dy: 1).intersects(callout.frame),
+            "callout \(callout.frame) overlaps the pin \(view.bounds)")
+    }
+
+    func testRecognizerDoesNotKeepItsViewAlive() throws {
+        let host = MapKitViewHost(messenger: NoopMessenger(), id: 0)
+        try host.updateAnnotations(
+            toAdd: [titledAnnotation("a", title: "A", callout: true)], toChange: [], idsToRemove: [])
+        weak var released: MKAnnotationView?
+        autoreleasepool {
+            let view = MKMarkerAnnotationView(annotation: host.annotationsById["a"], reuseIdentifier: nil)
+            host.mapView(host.mapView, didSelect: view)
+            XCTAssertEqual((view.gestureRecognizers ?? []).filter { $0 is InfoWindowTapGestureRecognizer }.count, 1)
+            released = view
+        }
+
+        XCTAssertNil(released, "the recognizer retains its view, a cycle only didDeselect broke")
+    }
+
+    func testAChangedTitleReachesTheVisibleMarkerLabel() async throws {
+        let scene = try XCTUnwrap(UIApplication.shared.connectedScenes.compactMap { $0 as? UIWindowScene }.first)
+        let window = UIWindow(windowScene: scene)
+        window.frame = CGRect(x: 0, y: 0, width: 400, height: 800)
+        let root = UIViewController()
+        window.rootViewController = root
+        window.makeKeyAndVisible()
+        addTeardownBlock { @MainActor in window.isHidden = true }
+        let host = MapKitViewHost(messenger: NoopMessenger(), id: 0)
+        root.view.addSubview(host.view())
+        host.view().frame = root.view.bounds
+        host.mapView.frame = root.view.bounds
+        host.mapView.setRegion(MKCoordinateRegion(
+            center: CLLocationCoordinate2D(latitude: 0, longitude: 0),
+            span: MKCoordinateSpan(latitudeDelta: 1, longitudeDelta: 1)), animated: false)
+        try await Task.sleep(for: .seconds(1))
+        try host.updateAnnotations(toAdd: [titledAnnotation("a", title: "Alpha")], toChange: [], idsToRemove: [])
+        try await Task.sleep(for: .seconds(2))
+
+        func render() -> Data? {
+            UIGraphicsImageRenderer(bounds: CGRect(x: 100, y: 330, width: 200, height: 160)).pngData { _ in
+                window.drawHierarchy(in: window.bounds, afterScreenUpdates: true)
+            }
+        }
+        let before = render()
+        XCTAssertEqual(before, render(), "the map must be settled to compare renders")
+
+        try host.updateAnnotations(
+            toAdd: [], toChange: [titledAnnotation("a", title: "A much longer title")], idsToRemove: [])
+        try await Task.sleep(for: .seconds(2))
+
+        XCTAssertNotEqual(before, render(), "the label under the pin still shows the old title")
+    }
+
+    func testAChangedTitleReachesTheVisibleCallout() async throws {
+        let (host, view, _) = try await mapWithSelectedCallout(NoopMessenger(), subtitle: nil)
+
+        func labels(_ root: UIView) -> [String] {
+            root.subviews.flatMap(labels) + [(root as? UILabel)?.text].compactMap { $0 }
+        }
+        XCTAssertTrue(labels(view).contains("Title"), "\(labels(view))")
+
+        try host.updateAnnotations(
+            toAdd: [], toChange: [titledAnnotation("a", title: "Changed", callout: true)], idsToRemove: [])
+        try await Task.sleep(for: .milliseconds(500))
+
+        XCTAssertTrue(labels(view).contains("Changed"), "stale callout: \(labels(view))")
     }
 }

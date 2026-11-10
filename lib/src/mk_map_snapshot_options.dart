@@ -15,7 +15,9 @@ final class const MKMapSnapshotOptions({
   /// Whether the plugin draws the current annotations into the snapshot.
   final bool showsAnnotations = true,
 
-  /// Whether the plugin draws the current overlays into the snapshot.
+  /// Whether the plugin draws the current overlays into the snapshot, tile
+  /// overlays included: their visible tiles are fetched with
+  /// `MKTileOverlay.loadTile`, and one that fails fails the snapshot.
   final bool showsOverlays = true,
 }) {
   /// Creates options controlling what a map snapshot includes.

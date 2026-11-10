@@ -147,21 +147,24 @@ class _MapPageState extends State<MapPage> {
 
 Value types validate in every build mode and throw an `ArgumentError` for input
 MapKit can't represent — a latitude outside `[-90, 90]` (swapped arguments), a
-non-finite number, a negative `lineWidth`, `alpha` outside `[0, 1]`, a zoom
-range whose minimum exceeds its maximum. That is why those types have no `const`
-constructor; ids, marker icons, regions, map configurations and snapshot options
-do. Polylines, polygons and point-of-interest filters keep their own
-unmodifiable copy of the lists you pass, so changing a list later never changes
-the value. Longitude wraps into `[-180, 180)` like MapKit. `Coordinate` is an
-exported alias for `CLLocationCoordinate2D`; if another package also exports a
-`Coordinate`, `hide` it on import.
+non-finite number, a negative `lineWidth`, `alpha` outside `[0, 1]`, a camera
+`pitch` outside `[0, 90)`, a zoom range whose minimum exceeds its maximum. That
+is why those types have no `const` constructor; ids, marker icons, regions, map
+configurations and snapshot options do. Polylines, polygons and
+point-of-interest filters keep their own unmodifiable copy of the lists you
+pass, so changing a list later never changes the value. Longitude wraps into
+`[-180, 180)` like MapKit. `Coordinate` is an exported alias for
+`CLLocationCoordinate2D`; if another package also exports a `Coordinate`, `hide`
+it on import.
 
 Content is declarative: on every rebuild, `MKMapView` diffs each set by id. A
 new id is added, a changed object with the same id is updated, and an id that
 left the set is removed from the map. The diff runs against what the map last
-received, so you can build a new set on every rebuild or change one in place and
-call `setState`. Ids must be unique per kind; two annotations (or two
-polylines…) sharing an id throw when `MKMapView` builds.
+accepted, so you can build a new set on every rebuild or change one in place and
+call `setState`. A batch MapKit rejects, say for an undecodable icon, fails as a
+whole; once you change the set, everything it held goes out again. Ids must be
+unique per kind; two annotations (or two polylines…) sharing an id throw when
+`MKMapView` builds.
 
 Models override `==`, so they can't be used in `const {…}` set literals — build
 the set without `const`. `copyWith` clears a nullable field when you pass `null`
@@ -385,6 +388,35 @@ Future<void> addOsm(MKMapViewController controller) async {
 Adding an id that is already on the map throws (`duplicate-id`); remove it first
 to replace it. `removeTileOverlay` returns `false` when the id isn't on the map.
 
+Snapshots include tile overlays. `takeSnapshot` fetches the visible tiles with
+the overlay's own `MKTileOverlay.loadTile`, each at the zoom its on-screen size
+calls for, then draws them in the map's overlay order with their `alpha`. A
+snapshot fails with `snapshot-failed` when a tile can't be fetched or isn't an
+image, and that includes a server's 404 page, so give sparse sources a blank
+tile instead. It also fails when tiles don't arrive within 60 seconds, and when
+a view needs more than 1024 tiles across its overlays. At the default `tileSize`
+of 256, MapKit's steepest camera takes about 50 tiles on a phone and 300 on a
+2560-point window, so that takes a very small `tileSize` or several overlays on
+a large window.
+
+What a snapshot can't match on the live map:
+
+- `MKMapSnapshotter` bakes Apple's labels and 3D buildings into its base map, so
+  even an `aboveRoads` overlay lies flat on top of them.
+- With `canReplaceMapContent`, the snapshot leaves out the base map and is
+  transparent where no opaque tile covers it.
+- A steep camera asks your source for low zooms toward the horizon, down to zoom
+  0, and distant tiles look softer than near ones. MapKit's pitch cap puts the
+  ground's horizon at the top of the view, so tiles reach it, covering the band
+  where Apple's own base map has already faded into sky.
+- Tile grids end at the Mercator world's edge, about 85.05° north and south.
+  Past that the base map shows through, which a steep camera at high latitudes
+  can bring into view.
+- Past `maximumZ` the highest tiles are upscaled, however close the camera
+  comes. Where a tile would fall below `minimumZ` the overlay has nothing to
+  draw and the base map shows through, which under a steep camera means the far
+  part of the view.
+
 ## Controller
 
 `MKMapViewController` is `MKMapView`'s imperative surface. You get it from
@@ -497,8 +529,9 @@ Future<void> frame(
 Zoom levels are a Web-Mercator convenience (`MKMapCamera.withZoomLevel` /
 `camera.zoomLevel`); MapKit's native unit is `distance` in meters. The
 camera-relative helpers throw a `StateError` before the view's first layout, and
-`fitCoordinates` throws an `ArgumentError` for an empty list or a negative
-`padding` / `minimumSpan`.
+`fitCoordinates` throws an `ArgumentError` for an empty list, a negative
+`padding` / `minimumSpan`, or a span they widen past what `MKCoordinateSpan`
+allows (180° latitude, 360° longitude).
 
 ## iOS and macOS differences
 
@@ -524,20 +557,26 @@ call instead: on macOS it fails with a `MapKitPlatformException` whose code is
 Misuse fails loudly, in debug and release alike, close to its cause:
 
 - **Invalid values** throw an `ArgumentError` from the constructor (see
-  [Values, ids and updates](#values-ids-and-updates)), including `onTap` without
-  `consumeTapEvents` and `onCalloutTap` without `calloutConsumesTapEvents`.
+  [Values, ids and updates](#values-ids-and-updates)).
+- **Callbacks that could never fire** throw an `ArgumentError`: `onTap` without
+  `consumeTapEvents`; `onDragStart` / `onDragEnd` without `isDraggable`;
+  `onCalloutTap` without `calloutConsumesTapEvents` or without a `title` or
+  `subtitle`; `onMapFeatureSelected` without `selectableMapFeatures`.
 - **Duplicate ids** in one of `MKMapView`'s sets throw an `ArgumentError` when
   the widget builds or updates.
 - **iOS-only settings on macOS** throw a `MapKitUnsupportedPlatformException`
   whose `feature` names the setting.
-- **Use after dispose** throws a `MapKitDisposedException`.
+- **Use after dispose** throws a `MapKitDisposedException` from the controller
+  methods you call. Updates `MKMapView` itself had queued are simply dropped.
+- **Building on the web**, Safari on an iPhone included, throws a
+  `MapKitUnsupportedPlatformException`.
 
 Native failures surface as a `MapKitPlatformException` with a stable `code` plus
 the native `message` / `details`:
 
 | Code | When |
 | --- | --- |
-| `snapshot-failed` | `takeSnapshot` produced no image (e.g. tile loading failed, zero-sized view) |
+| `snapshot-failed` | `takeSnapshot` produced no image: a tile overlay's tile failed to load, isn't an image or missed the 60-second deadline, the view needs more than 1024 tiles, a tile can't be projected onto the view, base map loading failed, the view has zero size, or the map was disposed during the snapshot |
 | `look-around-failed` | the Look Around scene request failed (e.g. offline) or there is no view controller to present from |
 | `unsupported-platform` | `openLookAround` on macOS |
 | `duplicate-id` | `addTileOverlay` with an id already on the map |
@@ -557,7 +596,10 @@ Future<void> snapshot(MKMapViewController controller) async {
 
 Errors from declarative content (annotations, overlays, configuration) happen
 while `MKMapView` pushes an update, outside any call you await, so they surface
-as uncaught errors in the zone — they don't vanish.
+as uncaught errors in the zone — they don't vanish. An exception thrown
+synchronously by a callback for a map event (`onTap`, `onSelect`,
+`onCameraMove`…) goes to `FlutterError.onError`, in every build mode; an `async`
+callback's error goes to the zone like any other unawaited future.
 
 What isn't an error is reported as a value: `openLookAround` returns `false`
 when no Look Around scene exists for the coordinate, `selectAnnotation` /

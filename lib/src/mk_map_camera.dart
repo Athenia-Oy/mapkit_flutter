@@ -22,13 +22,17 @@ final class MKMapCamera({
   /// Compass heading in degrees (0 = north).
   final double heading = 0.0,
 
-  /// Tilt in degrees (0 = looking straight down).
+  /// Tilt in degrees, in `[0, 90)` (0 = looking straight down).
+  ///
+  /// MapKit caps the tilt it actually shows by zoom level, and imagery maps
+  /// stay flat, so reading the camera back can report less than you set.
   final double pitch = 0.0,
 }) {
   /// Creates a camera looking at [centerCoordinate] from [distance] meters.
   ///
-  /// Throws [ArgumentError] unless [distance] is a finite value `> 0` and
-  /// [heading] and [pitch] are finite.
+  /// Throws [ArgumentError] unless [distance] is a finite value `> 0`,
+  /// [heading] is finite and [pitch] is in `[0, 90)`: MapKit resets a pitch of
+  /// 90 or more to 0 and mirrors a negative one.
   this {
     if (!(distance > 0 && distance.isFinite)) {
       throw ArgumentError.value(
@@ -38,7 +42,9 @@ final class MKMapCamera({
       );
     }
     checkFinite(heading, 'heading');
-    checkFinite(pitch, 'pitch');
+    if (!(pitch >= 0 && pitch < 90)) {
+      throw ArgumentError.value(pitch, 'pitch', 'must be in [0, 90) degrees');
+    }
   }
 
   /// Constructs a camera from its Pigeon wire representation.

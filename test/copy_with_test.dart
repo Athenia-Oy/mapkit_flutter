@@ -27,6 +27,7 @@ void main() {
       title: 'title',
       subtitle: 'subtitle',
       clusteringIdentifier: 'shops',
+      isDraggable: true,
       calloutConsumesTapEvents: true,
       onCalloutTap: tap,
       onDragStart: onCoordinate,

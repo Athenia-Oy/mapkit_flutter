@@ -1,4 +1,7 @@
+import 'dart:async';
+
 import 'package:checks/checks.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mapkit_flutter/mapkit_flutter.dart';
@@ -105,7 +108,7 @@ void main() {
       check(fromCallback).isNotNull();
       check(host.callNames).deepEquals(['initialize']);
       final params = host.initializeParams();
-      check(params.initialCamera.distance).equals(sampleCamera.distance);
+      check(params.initialCamera?.distance).equals(sampleCamera.distance);
       check(params.annotations).length.equals(1);
       check(params.polylines).length.equals(1);
       check(params.polygons).isEmpty();
@@ -380,6 +383,393 @@ void main() {
     });
   });
 
+  group('updates native rejects', () {
+    final rejected = PlatformException(code: 'invalid-icon');
+
+    // A rejected widget-driven push has no caller: it surfaces as an uncaught
+    // error in the zone that built the widget.
+    Future<void> pumpRejected(WidgetTester tester, Widget widget) async {
+      final uncaught = <Object>[];
+      host.errorToThrow = rejected;
+      await runZonedGuarded(() async {
+        await tester.pumpWidget(widget);
+        await tester.pump();
+      }, (error, _) => uncaught.add(error));
+      check(uncaught).single.isA<MapKitPlatformException>();
+    }
+
+    MKPointAnnotation badThenGood(String title) =>
+        .new(id: const .new('b'), coordinate: applePark, title: title);
+
+    testWidgets('a fixed annotation arrives with the batch it failed in', (
+      tester,
+    ) async {
+      await tester.pumpWidget(map());
+      await tester.pump();
+
+      await pumpRejected(
+        tester,
+        map(annotations: {annotation('a'), badThenGood('bad')}),
+      );
+
+      await tester.pumpWidget(
+        map(annotations: {annotation('a'), badThenGood('good')}),
+      );
+      await tester.pump();
+
+      final AnnotationUpdate(:$1, :$2, :$3) = host.calls.expectLastArgs(
+        'updateAnnotations',
+      );
+      check($1.map((a) => a.id)).deepEquals(['a', 'b']);
+      check($1.last.title).equals('good');
+      check($2).isEmpty();
+      check($3).isEmpty();
+    });
+
+    testWidgets('a rebuild that changes nothing does not resend a rejection', (
+      tester,
+    ) async {
+      await tester.pumpWidget(map());
+      await tester.pump();
+      await pumpRejected(tester, map(annotations: {annotation('a')}));
+
+      await tester.pumpWidget(map(annotations: {annotation('a')}));
+      await tester.pump();
+
+      check(host.callNames).deepEquals(['initialize']);
+    });
+
+    testWidgets('reverting a rejected change sends nothing', (tester) async {
+      await tester.pumpWidget(map(annotations: {annotation('a')}));
+      await tester.pump();
+      await pumpRejected(
+        tester,
+        map(annotations: {annotation('a', title: 'x')}),
+      );
+
+      await tester.pumpWidget(map(annotations: {annotation('a')}));
+      await tester.pump();
+
+      check(host.callNames).deepEquals(['initialize']);
+    });
+
+    testWidgets('an accepted update is not resent after a later rejection', (
+      tester,
+    ) async {
+      await tester.pumpWidget(map(annotations: {annotation('a')}));
+      await tester.pump();
+      await pumpRejected(
+        tester,
+        map(annotations: {annotation('a'), annotation('b')}),
+      );
+
+      await tester.pumpWidget(
+        map(annotations: {annotation('a'), annotation('c')}),
+      );
+      await tester.pump();
+
+      final AnnotationUpdate(:$1) = host.calls.expectLastArgs(
+        'updateAnnotations',
+      );
+      check($1.map((a) => a.id)).deepEquals(['c']);
+    });
+
+    testWidgets('a rejected batch keeps its removals for the next one', (
+      tester,
+    ) async {
+      await tester.pumpWidget(
+        map(annotations: {annotation('a'), annotation('gone')}),
+      );
+      await tester.pump();
+      await pumpRejected(tester, map(annotations: {annotation('a')}));
+
+      await tester.pumpWidget(
+        map(annotations: {annotation('a', title: 'fixed')}),
+      );
+      await tester.pump();
+
+      final AnnotationUpdate(:$2, :$3) = host.calls.expectLastArgs(
+        'updateAnnotations',
+      );
+      check($2.single.title).equals('fixed');
+      check($3).deepEquals(['gone']);
+    });
+
+    for (final (name, method, Widget Function(String) build) in [
+      (
+        'polylines',
+        'updatePolylines',
+        (String id) => map(polylines: {polyline('kept'), polyline(id)}),
+      ),
+      (
+        'polygons',
+        'updatePolygons',
+        (String id) => map(polygons: {polygon('kept'), polygon(id)}),
+      ),
+      (
+        'circles',
+        'updateCircles',
+        (String id) => map(circles: {circle('kept'), circle(id)}),
+      ),
+    ]) {
+      testWidgets('rejected $name arrive with the next batch', (tester) async {
+        await tester.pumpWidget(map());
+        await tester.pump();
+        await pumpRejected(tester, build('first'));
+
+        await tester.pumpWidget(build('second'));
+        await tester.pump();
+
+        final (
+          List<Object?> toAdd,
+          List<Object?> _,
+          List<String> _,
+        ) = switch (host.calls.lastRecorded()) {
+          (name: final called, :final args) when called == method =>
+            _overlayUpdate(args),
+          final other => fail('expected $method, got $other'),
+        };
+        check(toAdd.length).equals(2);
+      });
+    }
+
+    testWidgets('a rejected initialize is retried whole', (tester) async {
+      await pumpRejected(
+        tester,
+        map(annotations: {annotation('a'), badThenGood('bad')}),
+      );
+      check(host.callNames).isEmpty();
+
+      await tester.pumpWidget(
+        map(
+          annotations: {annotation('a'), badThenGood('good')},
+          isZoomEnabled: false,
+        ),
+      );
+      await tester.pump();
+
+      final params = host.initializeParams();
+      check(params.initialCamera?.distance).equals(sampleCamera.distance);
+      check(params.configuration.isZoomEnabled).isFalse();
+      check(params.annotations.map((a) => a.title)).deepEquals([null, 'good']);
+
+      await tester.pumpWidget(
+        map(
+          annotations: {annotation('a'), badThenGood('good')},
+          isZoomEnabled: false,
+        ),
+      );
+      await tester.pump();
+      check(host.callNames).deepEquals(['initialize']);
+    });
+
+    testWidgets(
+      'a multi-slice rebuild after a rejected initialize retries once',
+      (tester) async {
+        await pumpRejected(tester, map(annotations: {badThenGood('bad')}));
+
+        host
+          ..attemptedCallNames.clear()
+          ..errorToThrow = rejected
+          ..keepThrowing = true;
+        final uncaught = <Object>[];
+        await runZonedGuarded(() async {
+          await tester.pumpWidget(
+            map(
+              isZoomEnabled: false,
+              annotations: {badThenGood('still-bad')},
+              polylines: {polyline('p')},
+              polygons: {polygon('g')},
+              circles: {circle('c')},
+            ),
+          );
+          await tester.pump();
+        }, (error, _) => uncaught.add(error));
+
+        check(host.attemptedCallNames).deepEquals(['initialize']);
+        check(uncaught).single.isA<MapKitPlatformException>();
+
+        host
+          ..keepThrowing = false
+          ..errorToThrow = null;
+        await tester.pumpWidget(
+          map(
+            isZoomEnabled: false,
+            annotations: {badThenGood('good')},
+            polylines: {polyline('p')},
+            polygons: {polygon('g')},
+            circles: {circle('c')},
+          ),
+        );
+        await tester.pump();
+
+        check(host.callNames).deepEquals(['initialize']);
+        final params = host.initializeParams();
+        check(params.configuration.isZoomEnabled).isFalse();
+        check(params.annotations.single.title).equals('good');
+        check(params.polylines.single.id).equals('p');
+        check(params.polygons.single.id).equals('g');
+        check(params.circles.single.id).equals('c');
+      },
+    );
+
+    group('a move accepted after a rejected initialize', () {
+      Future<void> mountRejected(
+        WidgetTester tester,
+        void Function(MKMapViewController) onMapCreated,
+      ) => pumpRejected(
+        tester,
+        map(annotations: {badThenGood('bad')}, onMapCreated: onMapCreated),
+      );
+
+      Future<PlatformMapViewCreationParams> retry(WidgetTester tester) async {
+        await tester.pumpWidget(map(annotations: {badThenGood('good')}));
+        await tester.pump();
+        return host.calls.expectLastArgs<PlatformMapViewCreationParams>(
+          'initialize',
+        );
+      }
+
+      final moved = CLLocationCoordinate2D(latitude: 1, longitude: 2);
+
+      testWidgets('setCamera survives the retry', (tester) async {
+        await mountRejected(
+          tester,
+          (c) => c.setCamera(.new(centerCoordinate: moved, distance: 5)),
+        );
+        check(host.callNames).deepEquals(['setCamera']);
+
+        check((await retry(tester)).initialCamera).isNull();
+      });
+
+      testWidgets('setRegion survives the retry', (tester) async {
+        await mountRejected(
+          tester,
+          (c) => c.setRegion(
+            .new(
+              center: moved,
+              span: .new(latitudeDelta: 1, longitudeDelta: 1),
+            ),
+          ),
+        );
+
+        check((await retry(tester)).initialCamera).isNull();
+      });
+
+      testWidgets('setCenter keeps the rest of the initial camera', (
+        tester,
+      ) async {
+        final tilted = MKMapCamera(
+          centerCoordinate: applePark,
+          distance: 900,
+          heading: 45,
+          pitch: 30,
+        );
+        Widget tiltedMap(
+          String title, {
+          void Function(MKMapViewController)? onMapCreated,
+        }) => MKMapView(
+          initialCamera: tilted,
+          annotations: {badThenGood(title)},
+          onMapCreated: onMapCreated,
+          debugControllerFactory: controllerFactory,
+        );
+        await pumpRejected(
+          tester,
+          tiltedMap('bad', onMapCreated: (c) => c.setCenter(moved)),
+        );
+
+        await tester.pumpWidget(tiltedMap('good'));
+        await tester.pump();
+
+        final camera = host.calls
+            .expectLastArgs<PlatformMapViewCreationParams>('initialize')
+            .initialCamera;
+        check(camera?.centerCoordinate.latitude).equals(1);
+        check(camera?.centerCoordinate.longitude).equals(2);
+        check(camera?.distance).equals(900);
+        check(camera?.heading).equals(45);
+        check(camera?.pitch).equals(30);
+      });
+
+      testWidgets('a move native rejected leaves the initial camera', (
+        tester,
+      ) async {
+        MKMapViewController? controller;
+        await mountRejected(tester, (c) => controller = c);
+        final created = controller;
+        if (created == null) fail('onMapCreated never ran');
+
+        host.errorToThrow = rejected;
+        await check(
+          created.setCamera(.new(centerCoordinate: moved, distance: 5)),
+        ).throws<MapKitPlatformException>();
+
+        check((await retry(tester)).initialCamera?.distance)
+            .equals(sampleCamera.distance);
+      });
+    });
+
+    testWidgets('rebuilds queued behind a call diff against what it accepted', (
+      tester,
+    ) async {
+      await tester.pumpWidget(map());
+      await tester.pump();
+      final gate = Completer<void>();
+      host.snapshotGate = gate.future;
+      final snapshot = requireCreated().takeSnapshot();
+      await tester.pumpWidget(map(annotations: {annotation('a')}));
+      await tester.pumpWidget(
+        map(annotations: {annotation('a'), annotation('b')}),
+      );
+
+      gate.complete();
+      await snapshot;
+      await tester.pump();
+
+      check(host.callNames)
+          .deepEquals(['initialize', 'takeSnapshot', 'updateAnnotations']);
+    });
+  });
+
+  group('unmounting with widget-driven updates queued', () {
+    testWidgets('drops them without an error', (tester) async {
+      await tester.pumpWidget(map());
+      await tester.pump();
+      final gate = Completer<void>();
+      host.snapshotGate = gate.future;
+      final snapshot = requireCreated().takeSnapshot();
+
+      await tester.pumpWidget(
+        map(
+          annotations: {annotation('a')},
+          polylines: {polyline('p')},
+          polygons: {polygon('g')},
+          circles: {circle('c')},
+          isZoomEnabled: false,
+        ),
+      );
+      await tester.pumpWidget(const SizedBox());
+      gate.complete();
+      await snapshot;
+      await tester.pump();
+
+      check(tester.takeException()).isNull();
+      check(host.callNames)
+          .deepEquals(['initialize', 'dispose', 'takeSnapshot']);
+    });
+
+    testWidgets('user-called methods still throw', (tester) async {
+      await tester.pumpWidget(map());
+      await tester.pump();
+      final controller = requireCreated();
+      await tester.pumpWidget(const SizedBox());
+
+      await check(controller.setCamera(sampleCamera))
+          .throws<MapKitDisposedException>();
+    });
+  });
+
   group('inbound events', () {
     testWidgets('map taps and long presses reach the widget callbacks', (
       tester,
@@ -476,6 +866,8 @@ void main() {
         MKPointAnnotation interactive(String tag) => .new(
           id: const .new('a'),
           coordinate: applePark,
+          title: 'title',
+          isDraggable: true,
           calloutConsumesTapEvents: true,
           onCalloutTap: () => events.add('callout-$tag'),
           onDragStart: (c) => events.add('start-$tag:${c.latitude}'),
@@ -597,7 +989,12 @@ void main() {
       tester,
     ) async {
       MKMapFeature? selected;
-      await tester.pumpWidget(map(onMapFeatureSelected: (f) => selected = f));
+      await tester.pumpWidget(
+        map(
+          selectableMapFeatures: const {.pointsOfInterest},
+          onMapFeatureSelected: (f) => selected = f,
+        ),
+      );
       await tester.pump();
 
       requireCreated().eventHandler.onMapFeatureSelected(
@@ -619,6 +1016,49 @@ void main() {
     });
   });
 
+  group('callbacks that could never fire', () {
+    testWidgets('onMapFeatureSelected needs selectableMapFeatures', (
+      tester,
+    ) async {
+      await tester.pumpWidget(map(onMapFeatureSelected: (_) {}));
+      check(tester.takeException())
+          .isA<ArgumentError>()
+          .has((e) => e.name, 'name')
+          .equals('onMapFeatureSelected');
+    });
+
+    testWidgets('a rebuild that empties selectableMapFeatures throws', (
+      tester,
+    ) async {
+      await tester.pumpWidget(
+        map(
+          selectableMapFeatures: const {.pointsOfInterest},
+          onMapFeatureSelected: (_) {},
+        ),
+      );
+      check(tester.takeException()).isNull();
+      await tester.pumpWidget(map(onMapFeatureSelected: (_) {}));
+      check(tester.takeException()).isA<ArgumentError>();
+    });
+
+    testWidgets('onDidFailToLocateUser stays valid when a gesture drops the '
+        'tracking mode', (tester) async {
+      Widget tracking(MKUserTrackingMode mode) => MKMapView(
+        initialCamera: sampleCamera,
+        userTrackingMode: mode,
+        onUserTrackingModeChanged: (_) {},
+        onDidFailToLocateUser: (_) {},
+        debugControllerFactory: controllerFactory,
+      );
+      await tester.pumpWidget(tracking(.follow));
+      await tester.pump();
+
+      await tester.pumpWidget(tracking(.none));
+
+      check(tester.takeException()).isNull();
+    });
+  });
+
   group('iOS-only settings on macOS', () {
     final cases = <String, MKMapView Function(MKMapViewEventSinkFactory)>{
       'followWithHeading': (f) => .new(
@@ -633,6 +1073,7 @@ void main() {
       ),
       'onMapFeatureSelected': (f) => .new(
         initialCamera: sampleCamera,
+        selectableMapFeatures: const {.pointsOfInterest},
         onMapFeatureSelected: (_) {},
         debugControllerFactory: f,
       ),
@@ -694,6 +1135,17 @@ void main() {
     }, variant: TargetPlatformVariant.only(.macOS));
   });
 }
+
+(List<Object?>, List<Object?>, List<String>) _overlayUpdate(Object? args) =>
+    switch (args) {
+      (
+        final List<Object?> toAdd,
+        final List<Object?> toChange,
+        final List<String> idsToRemove,
+      ) =>
+        (toAdd, toChange, idsToRemove),
+      _ => fail('expected an overlay update, got $args'),
+    };
 
 typedef MKMapViewEventSinkFactory = MKMapViewControllerImpl Function(
   MKMapViewEventSink sink,

@@ -1490,7 +1490,7 @@ class PlatformSnapshotOptions {
 
 class PlatformMapViewCreationParams {
   PlatformMapViewCreationParams({
-    required this.initialCamera,
+    this.initialCamera,
     required this.configuration,
     required this.annotations,
     required this.polylines,
@@ -1498,7 +1498,9 @@ class PlatformMapViewCreationParams {
     required this.circles,
   });
 
-  PlatformMapCamera initialCamera;
+  /// Null keeps the map's camera: a retry of a rejected `initialize` must not
+  /// undo a camera move native accepted in between.
+  PlatformMapCamera? initialCamera;
 
   PlatformMapConfiguration configuration;
 
@@ -1528,7 +1530,7 @@ class PlatformMapViewCreationParams {
   static PlatformMapViewCreationParams decode(Object result) {
     result as List<Object?>;
     return PlatformMapViewCreationParams(
-      initialCamera: result[0]! as PlatformMapCamera,
+      initialCamera: result[0] as PlatformMapCamera?,
       configuration: result[1]! as PlatformMapConfiguration,
       annotations: (result[2]! as List<Object?>).cast<PlatformAnnotation>(),
       polylines: (result[3]! as List<Object?>).cast<PlatformPolyline>(),

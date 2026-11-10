@@ -208,13 +208,12 @@ void main() {
   });
 
   group('outbound — diff updates', () {
-    test('updateAnnotations forwards mapped platform lists', () async {
+    test('syncAnnotations forwards mapped platform lists', () async {
       final harness = buildHarness();
-      final before = {annotation('a')};
-      final after = {annotation('a', coordinate: infiniteLoop)};
-      await harness.controller.updateAnnotations(
-        .between(before, after, idOf: (a) => a.id.value),
-      );
+      await harness.controller.syncAnnotations({annotation('a')});
+      await harness.controller.syncAnnotations({
+        annotation('a', coordinate: infiniteLoop),
+      });
       final args = harness.expectLast<AnnotationUpdate>('updateAnnotations');
       check(args.$2).length.equals(1); // toChange
     });
@@ -289,6 +288,26 @@ void main() {
       await harness.dispose();
       final setCamera = harness.controller.setCamera(sampleCamera);
       await check(setCamera).throws<MapKitDisposedException>();
+    });
+
+    test('disposed controller drops widget-driven pushes', () async {
+      final harness = buildHarness();
+      final configuration = platformConfiguration();
+      await harness.dispose();
+      await harness.controller.syncAnnotations({annotation('a')});
+      await harness.controller.syncPolylines({polyline('l')});
+      await harness.controller.syncPolygons({polygon('g')});
+      await harness.controller.syncCircles({circle('c')});
+      await harness.controller.updateMapConfiguration(configuration);
+      await harness.controller.initialize(
+        initialCamera: sampleCamera,
+        configuration: configuration,
+        annotations: const {},
+        polylines: const {},
+        polygons: const {},
+        circles: const {},
+      );
+      harness.expectCalls(['dispose']);
     });
 
     for (final code in ['look-around-failed', 'unsupported-platform']) {

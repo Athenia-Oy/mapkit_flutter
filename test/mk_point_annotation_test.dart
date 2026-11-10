@@ -96,7 +96,7 @@ void main() {
       zPriority: zPriority,
     );
 
-    for (final bad in [double.nan, double.infinity, double.negativeInfinity]) {
+    for (final bad in <double>[.nan, .infinity, .negativeInfinity]) {
       test('rejects a $bad anchorPoint coordinate or zPriority', () {
         check(() => at(anchorPoint: .new(bad, 1))).throws<ArgumentError>();
         check(() => at(anchorPoint: .new(0.5, bad))).throws<ArgumentError>();
@@ -118,6 +118,7 @@ void main() {
       MKPointAnnotation withCallbacks() => .new(
         id: const .new('a'),
         coordinate: applePark,
+        isDraggable: true,
         onSelect: () {},
         onDragStart: (_) {},
         onDragEnd: (_) {},
@@ -143,11 +144,13 @@ void main() {
         final withCallout = MKPointAnnotation(
           id: const .new('a'),
           coordinate: applePark,
+          title: 'title',
           calloutConsumesTapEvents: true,
           onCalloutTap: () {},
         );
+        final consumingTitled = consuming.copyWith(title: 'title');
         check(consuming == plain).isFalse();
-        check(withCallout).equals(consuming);
+        check(withCallout).equals(consumingTitled);
         check(withCallout.toPlatform().calloutConsumesTapEvents).isTrue();
         check(plain.toPlatform().calloutConsumesTapEvents).isFalse();
       },
@@ -161,6 +164,118 @@ void main() {
           onCalloutTap: () {},
         ),
       ).throws<ArgumentError>();
+    });
+
+    for (final (name, MKPointAnnotation Function() build) in [
+      (
+        'onDragStart',
+        () => .new(
+          id: const .new('a'),
+          coordinate: applePark,
+          onDragStart: (_) {},
+        ),
+      ),
+      (
+        'onDragEnd',
+        () =>
+            .new(id: const .new('a'), coordinate: applePark, onDragEnd: (_) {}),
+      ),
+      (
+        'onCalloutTap',
+        () => .new(
+          id: const .new('a'),
+          coordinate: applePark,
+          calloutConsumesTapEvents: true,
+          onCalloutTap: () {},
+        ),
+      ),
+      (
+        'onCalloutTap',
+        () => .new(
+          id: const .new('a'),
+          coordinate: applePark,
+          title: '',
+          calloutConsumesTapEvents: true,
+          onCalloutTap: () {},
+        ),
+      ),
+      (
+        'onCalloutTap',
+        () => .new(
+          id: const .new('a'),
+          coordinate: applePark,
+          subtitle: '',
+          calloutConsumesTapEvents: true,
+          onCalloutTap: () {},
+        ),
+      ),
+      (
+        'onCalloutTap',
+        () => .new(
+          id: const .new('a'),
+          coordinate: applePark,
+          subtitle: '\n',
+          calloutConsumesTapEvents: true,
+          onCalloutTap: () {},
+        ),
+      ),
+    ]) {
+      test('$name that could never fire throws', () {
+        check(build).throws<ArgumentError>()
+          ..has((e) => e.name, 'name').equals(name)
+          ..has((e) => e.message.toString(), 'message').contains('requires');
+      });
+    }
+
+    test('onCalloutTap accepts a subtitle-only callout', () {
+      check(
+        () => MKPointAnnotation(
+          id: const .new('a'),
+          coordinate: applePark,
+          subtitle: 'subtitle',
+          calloutConsumesTapEvents: true,
+          onCalloutTap: () {},
+        ),
+      ).returnsNormally();
+    });
+
+    group('copyWith keeps the pairs honest', () {
+      final draggable = MKPointAnnotation(
+        id: const .new('a'),
+        coordinate: applePark,
+        title: 'title',
+        isDraggable: true,
+        calloutConsumesTapEvents: true,
+        onDragStart: (_) {},
+        onDragEnd: (_) {},
+        onCalloutTap: () {},
+      );
+
+      test('turning off isDraggable with drag callbacks set throws', () {
+        check(() => draggable.copyWith(isDraggable: false))
+            .throws<ArgumentError>();
+        check(() => draggable.copyWith(isDraggable: false, onDragStart: null))
+            .throws<ArgumentError>();
+      });
+
+      test('turning off isDraggable clearing both callbacks is fine', () {
+        check(
+          () => draggable.copyWith(
+            isDraggable: false,
+            onDragStart: null,
+            onDragEnd: null,
+          ),
+        ).returnsNormally();
+      });
+
+      test('clearing the only callout text with onCalloutTap set throws', () {
+        check(() => draggable.copyWith(title: null)).throws<ArgumentError>();
+      });
+
+      test('adding a drag callback to a fixed annotation throws', () {
+        check(() => annotation('b').copyWith(onDragEnd: (_) {}))
+            .throws<ArgumentError>();
+      });
     });
 
     test('different coordinates compare unequal', () {
